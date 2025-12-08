@@ -29,11 +29,10 @@ class SimulationConfig:
     # ==================== 信道模型参数 ====================
     # Loo模型参数（简化版 - Phase 1）
     # 参考论文：城市环境，L-band，手持天线
-    # 注意：这些是调整后的值，以匹配论文Figure 2的性能曲线
-    # 原始估计值 alpha=-15dB, MP=-10dB 导致信道增益过低
-    alpha_dB = -2                   # LoS分量平均衰减 (dB) [调整后]
+    # 注意：这些是估计值，论文引用了 [5] 但未给出具体数值
+    alpha_dB = -15                  # LoS分量平均衰减 (dB)
     psi_dB = 3                      # LoS分量标准差 (dB)
-    MP_dB = 0                       # 多径分量功率 (dB) [调整后]
+    MP_dB = -10                     # 多径分量功率 (dB)
     f_doppler_max = 40e3            # 最大多普勒频移 (Hz) - 论文给出
     
     # ==================== 仿真控制 ====================
@@ -47,6 +46,33 @@ class SimulationConfig:
     
     # ==================== 卫星轨道（Phase 3 使用）====================
     satellite_altitude = 500e3      # VLEO卫星高度 (m) - 约500km
+    
+    # ==================== Phase 2: ABS参数 ====================
+    # ABS频率和带宽
+    fd = 2e9                        # ABS下行频率 (Hz) - 2 GHz (论文Table I)
+    Bd_options = [0.4e6, 1.2e6, 2e6, 3e6]  # ABS带宽选项 (Hz) - Figure 2测试
+    
+    # ABS功率和增益
+    Pd_dBm = 30                     # ABS发射功率 (dBm) - 论文Table I
+    Pd = 10 ** ((Pd_dBm - 30) / 10) # 转换为瓦特: 1W
+    Gd_t_dB = 9                     # ABS发射天线增益 (dBi)
+    Gd_r_dB = 0                     # MT接收ABS天线增益 (dBi)
+    Gsd_r_dB = 9                    # ABS接收卫星天线增益 (dBi) - S2A链路
+    Td_dBK = 24.6                   # ABS接收噪声温度 (dBK)
+    Tsd_dBK = 25.7                  # ABS接收卫星信号噪声温度 (dBK)
+    
+    # A2G信道参数（3GPP TR 38.811 - 城市环境）
+    # 参考: 3GPP TR 38.811 V15.4.0 Table 6.6.1
+    a2g_environment = 'urban'       # 环境类型
+    a2g_eta_los = 1.0               # LoS额外损耗 (dB)
+    a2g_eta_nlos = 20.0             # NLoS额外损耗 (dB)
+    a2g_param_a = 9.61              # LoS概率参数 a
+    a2g_param_b = 0.16              # LoS概率参数 b
+    
+    # ABS位置优化
+    abs_height_min = 50             # ABS最小高度 (m)
+    abs_height_max = 500            # ABS最大高度 (m)
+    abs_height_step = 10            # 高度搜索步长 (m)
     
     # ==================== 辅助方法 ====================
     @classmethod
@@ -94,6 +120,33 @@ class SimulationConfig:
         return snr_db
     
     @classmethod
+    def get_abs_noise_power(cls, bandwidth):
+        """
+        计算ABS接收端噪声功率 Nd = k * Td * Bd
+        
+        参数:
+            bandwidth: ABS带宽 (Hz)
+        
+        返回:
+            Nd: 噪声功率 (W)
+        """
+        T_kelvin = 10 ** (cls.Td_dBK / 10)
+        Nd = cls.k_boltzmann * T_kelvin * bandwidth
+        return Nd
+    
+    @classmethod
+    def get_s2a_noise_power(cls):
+        """
+        计算S2A链路（卫星到ABS）噪声功率 Nsd = k * Tsd * Bs
+        
+        返回:
+            Nsd: 噪声功率 (W)
+        """
+        T_kelvin = 10 ** (cls.Tsd_dBK / 10)
+        Nsd = cls.k_boltzmann * T_kelvin * cls.Bs
+        return Nsd
+    
+    @classmethod
     def print_config(cls):
         """打印当前配置"""
         print("=" * 60)
@@ -102,6 +155,7 @@ class SimulationConfig:
         print(f"\n【用户配置】")
         print(f"  总用户数 N: {cls.N}")
         print(f"  配对数 K: {cls.K}")
+        print(f"  覆盖半径: {cls.coverage_radius} m")
         
         print(f"\n【卫星参数】")
         print(f"  下行频率: {cls.fs/1e9:.3f} GHz")
@@ -111,11 +165,21 @@ class SimulationConfig:
         print(f"  噪声温度: {cls.Ts_dBK} dBK")
         print(f"  噪声功率: {cls.get_noise_power():.3e} W")
         
+        print(f"\n【ABS参数】 (Phase 2)")
+        print(f"  下行频率: {cls.fd/1e9:.1f} GHz")
+        print(f"  带宽选项: {[bd/1e6 for bd in cls.Bd_options]} MHz")
+        print(f"  发射功率: {cls.Pd_dBm} dBm ({cls.Pd:.3f} W)")
+        print(f"  发射天线增益: {cls.Gd_t_dB} dBi")
+        print(f"  高度范围: {cls.abs_height_min}-{cls.abs_height_max} m")
+        
         print(f"\n【信道模型】")
         print(f"  Loo模型 - α: {cls.alpha_dB} dB")
         print(f"  Loo模型 - ψ: {cls.psi_dB} dB")
         print(f"  Loo模型 - MP: {cls.MP_dB} dB")
         print(f"  最大多普勒: {cls.f_doppler_max/1e3:.0f} kHz")
+        print(f"  A2G环境: {cls.a2g_environment}")
+        print(f"  A2G LoS损耗: {cls.a2g_eta_los} dB")
+        print(f"  A2G NLoS损耗: {cls.a2g_eta_nlos} dB")
         
         print(f"\n【仿真设置】")
         print(f"  SNR范围: {cls.Ps_dB[0]}-{cls.Ps_dB[-1]} dB")
