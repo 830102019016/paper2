@@ -51,9 +51,9 @@ def simulate_satcon_curves(snr_range, elevation, n_mc):
     返回:
         satcon_results: dict {bandwidth: spectral_efficiency}
     """
-    # 调试模式：只测试单个带宽以加快速度
-    # bandwidths = config.Bd_options  # [0.4, 1.2, 2, 3] MHz
-    bandwidths = [1.2e6]  # 只测试Bd=1.2MHz
+    # 完整仿真：测试所有4个带宽
+    bandwidths = config.Bd_options  # [0.4, 1.2, 2, 3] MHz
+    # bandwidths = [1.2e6]  # 调试模式：只测试Bd=1.2MHz
     satcon_results = {}
     
     print(f"\n开始SATCON仿真...")
@@ -244,7 +244,7 @@ def main():
     print(f"  SNR范围: {snr_range[0]}-{snr_range[-1]} dB ({len(snr_range)} 点)")
     print(f"  仰角: {elevation}°")
     print(f"  Monte Carlo: {n_mc} 次")
-    print(f"  预计时间: ~{len(snr_range) * n_mc * 5 * 0.002:.1f} 分钟")
+    print(f"  预计时间: ~{len(snr_range) * n_mc * 5 * 0.002:.1f} 秒")
     
     # 1. 加载Phase 1基准
     snr_baseline, baseline_se = load_phase1_baseline()

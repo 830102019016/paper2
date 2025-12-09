@@ -242,9 +242,9 @@ class SATCONSystem:
         )
         
         # 3. 卫星NOMA速率
-        Ps = self.config.snr_to_power(snr_db)
+        snr_linear = 10 ** (snr_db / 10)
         sat_channel_gains = self.sat_noma.compute_channel_gains_with_pathloss(elevation_deg)
-        sat_rates, _ = self.sat_noma.compute_achievable_rates(sat_channel_gains, Ps)
+        sat_rates, _ = self.sat_noma.compute_achievable_rates(sat_channel_gains, snr_linear)
         
         # 4. A2G信道增益
         h_abs = abs_position[2]

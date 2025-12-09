@@ -54,16 +54,14 @@ class SatelliteNOMA:
     
     def compute_channel_gains_with_pathloss(self, elevation_deg):
         """
-        计算包含路径损耗的完整信道增益（归一化）
+        计算包含路径损耗的完整信道增益
 
-        论文公式(3)理解：
-        Γ_l = (Gs_t * Gs_r) / (L_FS_l * Ns) * |h_s_l|^2
+        论文公式(3)：Γ_l = (Gs_t * Gs_r) / (L_FS_l * Ns) * |h_s_l|^2
 
-        关键理解：
-        - 论文中的 Γ 是"归一化信道增益"，相对于噪声功率归一化
-        - SNR(dB) 指的是"发射 SNR" = Ps/Ns
-        - 实际接收 SINR = Ps * Γ = (Ps/Ns) * (Gtx*Grx/L_FS) * |h|^2
-        - 在速率公式中使用: R = B * log2(1 + Ps*Γ)
+        **关键理解**：论文的SNR定义是"接收SNR"，而不是"发射SNR"！
+        - 在速率公式中：R = B * log2(1 + SNR * Γ)
+        - 这里的SNR是无量纲的接收信噪比
+        - Γ已经归一化，所以SNR*Γ就是实际的SINR
 
         参数:
             elevation_deg (float): 卫星仰角 (度)
@@ -85,13 +83,13 @@ class SatelliteNOMA:
         # 4. 噪声功率
         Ns = self.config.get_noise_power()
 
-        # 5. 合成归一化信道增益（论文公式3）
+        # 5. 归一化信道增益（论文公式3）
         # Γ = (Gtx * Grx / (L_FS * Ns)) * |h|^2
         channel_gains = (G_tx * G_rx / (path_loss * Ns)) * fading_gains
 
         return channel_gains
-    
-    def compute_achievable_rates(self, channel_gains, total_power, verbose=False):
+
+    def compute_achievable_rates(self, channel_gains, snr_linear, verbose=False):
         """
         计算 SAT-NOMA 可达速率
 
@@ -102,7 +100,7 @@ class SatelliteNOMA:
 
         参数:
             channel_gains (ndarray): shape (2K,) 信道增益
-            total_power (float): 总发射功率 (W)
+            snr_linear (float): 接收SNR（线性值，无量纲）
             verbose (bool): 是否输出详细信息
 
         返回:
@@ -122,23 +120,23 @@ class SatelliteNOMA:
             weak_idx, strong_idx = pairs[k]
             gamma_weak, gamma_strong = paired_gains[k]
 
-            # 2.1 功率分配（不输出警告，由上层统计）
+            # 2.1 功率分配
+            # 注意：这里传入的是SNR而不是功率
             beta_strong, beta_weak = self.allocator.compute_power_factors(
-                gamma_strong, gamma_weak, total_power, verbose=False
+                gamma_strong, gamma_weak, snr_linear, verbose=False
             )
 
             # 2.2 强用户速率 - 论文公式(5)
-            # 强用户先解码弱用户信号（SIC），然后解码自己的信号
+            # R_j = B/K * log2(1 + β_j * SNR * Γ_j)
             rate_strong = bandwidth_per_pair * np.log2(
-                1 + beta_strong * total_power * gamma_strong
+                1 + beta_strong * snr_linear * gamma_strong
             )
 
             # 2.3 弱用户速率 - 论文公式(6)
-            # 弱用户直接解码，受到强用户信号干扰
-            interference = beta_strong * total_power * gamma_weak  # 来自强用户的干扰
-            signal = beta_weak * total_power * gamma_weak          # 自己的信号
+            interference = beta_strong * snr_linear * gamma_weak
+            signal = beta_weak * snr_linear * gamma_weak
             rate_weak = bandwidth_per_pair * np.log2(
-                1 + signal / (interference + 1)  # +1 是噪声功率归一化
+                1 + signal / (interference + 1)
             )
 
             # 2.4 存储速率
@@ -186,7 +184,6 @@ class SatelliteNOMA:
         
         for i, snr_db in snr_iterator:
             # 将 SNR(dB) 转换为线性值
-            # 注意：这里的 SNR 是归一化值，不是实际功率
             snr_linear = 10 ** (snr_db / 10)
 
             for r in range(n_realizations):
@@ -199,7 +196,7 @@ class SatelliteNOMA:
                 # 生成信道增益
                 channel_gains = self.compute_channel_gains_with_pathloss(elevation_deg)
 
-                # 计算速率（使用归一化的 SNR）
+                # 计算速率（使用SNR线性值）
                 _, sum_rate = self.compute_achievable_rates(channel_gains, snr_linear)
                 sum_rates_all[i, r] = sum_rate
             
