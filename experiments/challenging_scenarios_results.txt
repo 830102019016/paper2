@@ -1,0 +1,120 @@
+======================================================================
+TESTING CHALLENGING SCENARIOS
+======================================================================
+
+Hypothesis: More challenging scenarios ¡ú Higher optimization gains
+Testing 5 scenarios with 5 realizations each
+
+Estimated time: 10-15 minutes
+
+======================================================================
+Scenario: Baseline (Current)
+  N=32, R=500m, Bd=1.2MHz, SNR=20dB, E=10deg
+======================================================================
+
+Running 5 realizations...
+  Realization 1/5... Done
+  Realization 2/5... Done
+  Realization 3/5... Done
+  Realization 4/5... Done
+  Realization 5/5... Done
+
+Results:
+  Baseline:     26.63 ¡À 0.37 Mbps
+  Full System:  27.56 ¡À 0.44 Mbps
+  Gain:          0.92 Mbps (+3.47%)
+
+======================================================================
+Scenario: Large Coverage
+  N=32, R=1000m, Bd=1.2MHz, SNR=20dB, E=10deg
+======================================================================
+
+Running 5 realizations...
+  Realization 1/5... Done
+  Realization 2/5... Done
+  Realization 3/5... Done
+  Realization 4/5... Done
+  Realization 5/5... Done
+
+Results:
+  Baseline:     24.52 ¡À 0.60 Mbps
+  Full System:  25.13 ¡À 0.64 Mbps
+  Gain:          0.61 Mbps (+2.49%)
+
+======================================================================
+Scenario: Many Users
+  N=64, R=500m, Bd=1.2MHz, SNR=20dB, E=10deg
+======================================================================
+
+Running 5 realizations...
+  Realization 1/5... Done
+  Realization 2/5... Done
+  Realization 3/5... Done
+  Realization 4/5... Done
+  Realization 5/5... Done
+
+Results:
+  Baseline:     26.72 ¡À 0.18 Mbps
+  Full System:  27.59 ¡À 0.33 Mbps
+  Gain:          0.87 Mbps (+3.24%)
+
+======================================================================
+Scenario: Limited Bandwidth
+  N=32, R=500m, Bd=0.4MHz, SNR=20dB, E=10deg
+======================================================================
+
+Running 5 realizations...
+  Realization 1/5... Done
+  Realization 2/5... Done
+  Realization 3/5... Done
+  Realization 4/5... Done
+  Realization 5/5... Done
+
+Results:
+  Baseline:     13.56 ¡À 0.43 Mbps
+  Full System:  13.82 ¡À 0.37 Mbps
+  Gain:          0.27 Mbps (+1.96%)
+
+======================================================================
+Scenario: Extreme Challenge
+  N=64, R=1000m, Bd=3.0MHz, SNR=20dB, E=10deg
+======================================================================
+
+Running 5 realizations...
+  Realization 1/5... Done
+  Realization 2/5... Done
+  Realization 3/5... Done
+  Realization 4/5... Done
+  Realization 5/5... Done
+
+Results:
+  Baseline:     52.67 ¡À 0.67 Mbps
+  Full System:  52.71 ¡À 0.75 Mbps
+  Gain:          0.04 Mbps (+0.07%)
+
+======================================================================
+SUMMARY
+======================================================================
+
+Scenario                  Baseline (Mbps)    Full (Mbps)        Gain (%)
+----------------------------------------------------------------------
+Baseline (Current)          26.63 ¡À 0.37     27.56 ¡À 0.44      3.47
+Large Coverage              24.52 ¡À 0.60     25.13 ¡À 0.64      2.49
+Many Users                  26.72 ¡À 0.18     27.59 ¡À 0.33      3.24
+Limited Bandwidth           13.56 ¡À 0.43     13.82 ¡À 0.37      1.96
+Extreme Challenge           52.67 ¡À 0.67     52.71 ¡À 0.75      0.07
+
+======================================================================
+
+Best scenario:  Baseline (Current) (+3.47%)
+Worst scenario: Extreme Challenge (+0.07%)
+
+Gain statistics:
+  Mean:   2.25%
+  Median: 2.49%
+  Std:    1.21%
+  Range:  [0.07%, 3.47%]
+Traceback (most recent call last):
+  File "e:\satcon_reproduction\experiments\test_challenging_scenarios.py", line 175, in <module>
+    print(f"\n\u2717 CONCERN: All gains < 5%")
+UnicodeEncodeError: 'gbk' codec can't encode character '\u2717' in position 2: illegal multibyte sequence

@@ -1,0 +1,109 @@
+================================================================================
+SATCON Large-Scale Experiment - QUICK START GUIDE
+================================================================================
+
+OPTION 1: MEDIUM SCALE (RECOMMENDED, ~1 HOUR)
+--------------------------------------------------------------------------------
+Step 1: Edit config file
+   notepad experiments\config_comparison.yaml
+
+   Change line 6:
+   n_realizations: 1000  -->  n_realizations: 100
+
+   Change line 7:
+   n_realizations_ablation: 500  -->  n_realizations_ablation: 50
+
+   Save and close
+
+Step 2: Run experiment
+   python experiments\run_comparison.py
+
+Step 3: Check results
+   results\figures\comparison\main_comparison.png
+   results\tables\comparison\main_performance_*.csv
+
+DONE!
+
+Expected: Full system gains 3-5% over baseline
+
+
+================================================================================
+OPTION 2: FULL SCALE (4-8 HOURS, RUN OVERNIGHT)
+--------------------------------------------------------------------------------
+Step 1: No changes needed - config already set for 1000 realizations
+
+Step 2: Run experiment
+   python experiments\run_comparison.py
+
+Step 3: Go to sleep / do other work
+
+Step 4: Come back and check results
+   results\figures\comparison\main_comparison.png
+   results\tables\comparison\main_performance_*.csv
+
+DONE!
+
+Expected: Publication-quality results with tight confidence intervals
+
+
+================================================================================
+OPTION 3: QUICK TEST (2-3 MINUTES, VALIDATION ONLY)
+--------------------------------------------------------------------------------
+python experiments\run_quick_test.py
+
+Results shown in terminal immediately
+Last test result: +3.99% gain
+
+
+================================================================================
+KEY FILES
+================================================================================
+Config:        experiments\config_comparison.yaml
+Main script:   experiments\run_comparison.py
+Quick test:    experiments\run_quick_test.py
+
+Full guide:    experiments\MANUAL_STEPS.md
+Module docs:   src_enhanced\README.md
+
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+Problem: Too slow
+Solution: Reduce n_realizations to 50 or 10
+
+Problem: Out of memory
+Solution: Disable some systems in config (set enabled: false)
+
+Problem: Script crashes
+Solution: Run quick test first to validate setup
+
+
+================================================================================
+EXPECTED RESULTS (from quick test, N=32 users, SNR=20dB)
+================================================================================
+Baseline:      22.41 bits/s/Hz
+Module 1:      22.78 bits/s/Hz  (+1.65%)
+Module 2:      23.00 bits/s/Hz  (+2.5%)
+Module 3:      22.41 bits/s/Hz  (+0.0%)
+Full System:   23.30 bits/s/Hz  (+3.99%)
+
+
+================================================================================
+AFTER COMPLETION
+================================================================================
+Output files automatically saved to:
+- results\figures\comparison\  (PNG images, 300 DPI)
+- results\data\comparison\     (NPZ/PKL data files)
+- results\tables\comparison\   (CSV tables)
+
+
+================================================================================
+QUESTIONS?
+================================================================================
+See experiments\MANUAL_STEPS.md for detailed instructions
+See experiments\README.md for full documentation
+
+
+Last Updated: 2025-12-10
+Status: READY TO RUN
