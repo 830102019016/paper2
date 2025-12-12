@@ -1,35 +1,35 @@
 # -*- coding: utf-8 -*-
 """
-Integer Programming based Hybrid Decision Optimizer
+基于整数规划的混合决策优化器
 
-Original: Rule-based greedy decision (4 rules, per-pair local optimal)
-New: Integer programming for global optimal decision
+原始方法：基于规则的贪婪决策（4条规则，每对局部最优）
+新方法：整数规划实现全局最优决策
 
-Key idea:
-- Original: Each pair independently chooses best mode
-- New: Jointly optimize all pairs' mode selection for global optimum
+核心思想：
+- 原始方法：每对独立选择最佳模式
+- 新方法：联合优化所有对的模式选择以获得全局最优
 
-Dependencies:
-- cvxpy (optional): pip install cvxpy
-- If cvxpy not available, falls back to improved greedy algorithm
+依赖：
+- cvxpy（可选）：pip install cvxpy
+- 如果cvxpy不可用，回退到改进的贪婪算法
 
-Author: SATCON Enhancement Project
-Date: 2025-12-10
+作者：SATCON Enhancement Project
+日期：2025-12-10
 """
 import numpy as np
 import sys
 from pathlib import Path
 
-# Try to import cvxpy
+# 尝试导入cvxpy
 try:
     import cvxpy as cp
     CVXPY_AVAILABLE = True
 except ImportError:
     CVXPY_AVAILABLE = False
-    print("Warning: cvxpy not installed. Using greedy algorithm instead.")
-    print("  To install: pip install cvxpy")
+    print("警告：未安装cvxpy。改用贪婪算法。")
+    print("  安装命令：pip install cvxpy")
 
-# Add project root to path
+# 将项目根目录添加到路径
 sys.path.append(str(Path(__file__).parent.parent))
 
 from config import config
@@ -38,59 +38,59 @@ from src.power_allocation import NOMAAllocator
 
 class IntegerProgrammingDecision:
     """
-    Integer Programming based Hybrid Decision Optimizer
+    基于整数规划的混合决策优化器
 
-    Decision variables (for each pair k):
-    - x[k] in {0,1}: Use ABS NOMA for both users
-    - y_weak[k] in {0,1}: Use ABS OMA for weak user only
-    - y_strong[k] in {0,1}: Use ABS OMA for strong user only
+    决策变量（对于每对k）：
+    - x[k] in {0,1}：两个用户都使用ABS NOMA
+    - y_weak[k] in {0,1}：仅弱用户使用ABS OMA
+    - y_strong[k] in {0,1}：仅强用户使用ABS OMA
 
-    Objective:
-    - Maximize sum of all user rates
+    目标：
+    - 最大化所有用户速率之和
 
-    Constraints:
-    - Mutual exclusion: x[k] + y_weak[k] + y_strong[k] <= 1
-    - Bandwidth limit: sum of used bandwidth <= Bd
-    - S2A backhaul limit: ABS rate <= S2A rate (simplified: assume sufficient)
+    约束：
+    - 互斥性：x[k] + y_weak[k] + y_strong[k] <= 1
+    - 带宽限制：使用的带宽总和 <= Bd
+    - S2A回传限制：ABS速率 <= S2A速率（简化：假设充足）
     """
 
     def __init__(self):
-        """Initialize optimizer"""
+        """初始化优化器"""
         self.use_ilp = CVXPY_AVAILABLE
         self.allocator = NOMAAllocator()
 
     def compute_rate_options(self, sat_pairs, abs_pairs, sat_gains, a2g_gains,
                             Ps_dB, Pd, Bs, Bd):
         """
-        Compute all rate options for each pair
+        计算每对的所有速率选项
 
-        Args:
-            sat_pairs: Satellite pairing [(i,j), ...]
-            abs_pairs: ABS pairing [(m,n), ...]
-            sat_gains: Satellite channel gains [N]
-            a2g_gains: A2G channel gains [N]
-            Ps_dB: Satellite power (dB)
-            Pd: ABS power (W)
-            Bs: Satellite bandwidth
-            Bd: ABS bandwidth
+        参数：
+            sat_pairs: 卫星配对 [(i,j), ...]
+            abs_pairs: ABS配对 [(m,n), ...]
+            sat_gains: 卫星信道增益 [N]
+            a2g_gains: A2G信道增益 [N]
+            Ps_dB: 卫星功率 (dB)
+            Pd: ABS功率 (W)
+            Bs: 卫星带宽
+            Bd: ABS带宽
 
-        Returns:
-            rate_options: dict with keys ['sat', 'abs_noma', 'abs_oma_weak', 'abs_oma_strong']
-                         Each value is [K] array of rates for each pair
+        返回：
+            rate_options: 包含键['sat', 'abs_noma', 'abs_oma_weak', 'abs_oma_strong']的字典
+                         每个值是每对速率的[K]数组
         """
         K = len(sat_pairs)
         Bs_per_pair = Bs / K
         Bd_per_pair = Bd / K
         Ps = 10 ** (Ps_dB / 10)
 
-        # Initialize rate arrays
-        rate_sat = np.zeros(K)           # Satellite NOMA rates (sum of pair)
-        rate_abs_noma = np.zeros(K)      # ABS NOMA rates (sum of pair)
-        rate_abs_oma_weak = np.zeros(K)  # ABS OMA weak + Sat strong
-        rate_abs_oma_strong = np.zeros(K) # Sat weak + ABS OMA strong
+        # 初始化速率数组
+        rate_sat = np.zeros(K)           # 卫星NOMA速率（对的总和）
+        rate_abs_noma = np.zeros(K)      # ABS NOMA速率（对的总和）
+        rate_abs_oma_weak = np.zeros(K)  # ABS OMA弱用户 + 卫星强用户
+        rate_abs_oma_strong = np.zeros(K) # 卫星弱用户 + ABS OMA强用户
 
         for k in range(K):
-            # Satellite pair
+            # 卫星配对
             sat_i, sat_j = sat_pairs[k]
             gamma_sat_i, gamma_sat_j = sat_gains[sat_i], sat_gains[sat_j]
 
@@ -98,7 +98,7 @@ class IntegerProgrammingDecision:
                 sat_i, sat_j = sat_j, sat_i
                 gamma_sat_i, gamma_sat_j = gamma_sat_j, gamma_sat_i
 
-            # Satellite NOMA rates
+            # 卫星NOMA速率
             beta_sat_j, beta_sat_i = self.allocator.compute_power_factors(
                 gamma_sat_j, gamma_sat_i, Ps
             )
@@ -106,7 +106,7 @@ class IntegerProgrammingDecision:
                                             (beta_sat_j * Ps * gamma_sat_i + 1))
             R_sat_j = Bs_per_pair * np.log2(1 + beta_sat_j * Ps * gamma_sat_j)
 
-            # ABS pair
+            # ABS配对
             abs_m, abs_n = abs_pairs[k]
             gamma_abs_m, gamma_abs_n = a2g_gains[abs_m], a2g_gains[abs_n]
 
@@ -114,7 +114,7 @@ class IntegerProgrammingDecision:
                 abs_m, abs_n = abs_n, abs_m
                 gamma_abs_m, gamma_abs_n = gamma_abs_n, gamma_abs_m
 
-            # ABS NOMA rates
+            # ABS NOMA速率
             beta_abs_n, beta_abs_m = self.allocator.compute_power_factors(
                 gamma_abs_n, gamma_abs_m, Pd
             )
@@ -122,26 +122,26 @@ class IntegerProgrammingDecision:
                                                   (beta_abs_n * Pd * gamma_abs_m + 1))
             R_abs_noma_n = Bd_per_pair * np.log2(1 + beta_abs_n * Pd * gamma_abs_n)
 
-            # ABS OMA rates
+            # ABS OMA速率
             R_abs_oma_m = Bd_per_pair * np.log2(1 + Pd * gamma_abs_m)
             R_abs_oma_n = Bd_per_pair * np.log2(1 + Pd * gamma_abs_n)
 
-            # Rate options for this pair
+            # 此对的速率选项
             rate_sat[k] = R_sat_i + R_sat_j
 
-            # Check if users match
+            # 检查用户是否匹配
             if abs_m == sat_i and abs_n == sat_j:
-                # Perfect match
+                # 完美匹配
                 rate_abs_noma[k] = R_abs_noma_m + R_abs_noma_n
                 rate_abs_oma_weak[k] = R_abs_oma_m + R_sat_j
                 rate_abs_oma_strong[k] = R_sat_i + R_abs_oma_n
             elif abs_m == sat_j and abs_n == sat_i:
-                # Reversed match
+                # 反向匹配
                 rate_abs_noma[k] = R_abs_noma_m + R_abs_noma_n
                 rate_abs_oma_weak[k] = R_abs_oma_m + R_sat_i
                 rate_abs_oma_strong[k] = R_sat_j + R_abs_oma_n
             else:
-                # Different users - use best available
+                # 不同用户 - 使用可用的最佳方案
                 rate_abs_noma[k] = R_abs_noma_m + R_abs_noma_n
                 rate_abs_oma_weak[k] = max(R_abs_oma_m, R_abs_oma_n) + min(R_sat_i, R_sat_j)
                 rate_abs_oma_strong[k] = max(R_sat_i, R_sat_j) + min(R_abs_oma_m, R_abs_oma_n)
@@ -156,40 +156,40 @@ class IntegerProgrammingDecision:
     def optimize_ilp(self, sat_pairs, abs_pairs, sat_gains, a2g_gains,
                     Ps_dB, Pd, Bs, Bd):
         """
-        Integer Linear Programming optimization
+        整数线性规划优化
 
-        Args:
-            sat_pairs: Satellite pairing
-            abs_pairs: ABS pairing
-            sat_gains: Satellite channel gains
-            a2g_gains: A2G channel gains
-            Ps_dB: Satellite power (dB)
-            Pd: ABS power (W)
-            Bs: Satellite bandwidth
-            Bd: ABS bandwidth
+        参数：
+            sat_pairs: 卫星配对
+            abs_pairs: ABS配对
+            sat_gains: 卫星信道增益
+            a2g_gains: A2G信道增益
+            Ps_dB: 卫星功率 (dB)
+            Pd: ABS功率 (W)
+            Bs: 卫星带宽
+            Bd: ABS带宽
 
-        Returns:
-            decisions: List of decisions for each pair ['sat'/'noma'/'oma_weak'/'oma_strong']
-            final_rate: Total system rate
-            info: Optimization info
+        返回：
+            decisions: 每对的决策列表 ['sat'/'noma'/'oma_weak'/'oma_strong']
+            final_rate: 总系统速率
+            info: 优化信息
         """
         if not CVXPY_AVAILABLE:
-            raise RuntimeError("cvxpy not available. Use optimize_greedy() instead.")
+            raise RuntimeError("cvxpy不可用。请使用optimize_greedy()代替。")
 
         K = len(sat_pairs)
 
-        # Compute rate options
+        # 计算速率选项
         rate_opts = self.compute_rate_options(
             sat_pairs, abs_pairs, sat_gains, a2g_gains,
             Ps_dB, Pd, Bs, Bd
         )
 
-        # Decision variables
+        # 决策变量
         x_noma = cp.Variable(K, boolean=True)
         y_weak = cp.Variable(K, boolean=True)
         y_strong = cp.Variable(K, boolean=True)
 
-        # Objective: maximize total rate
+        # 目标：最大化总速率
         objective_terms = []
         for k in range(K):
             # Contribution from each mode
@@ -201,26 +201,26 @@ class IntegerProgrammingDecision:
 
         objective = cp.Maximize(cp.sum(objective_terms))
 
-        # Constraints
+        # 约束
         constraints = []
 
-        # 1. Mutual exclusion: at most one ABS mode per pair
+        # 1. 互斥性：每对最多一种ABS模式
         for k in range(K):
             constraints.append(x_noma[k] + y_weak[k] + y_strong[k] <= 1)
 
-        # 2. Only use ABS if it's better than satellite
+        # 2. 仅当ABS优于卫星时才使用ABS
         for k in range(K):
-            # NOMA only if better
+            # 仅当NOMA更好时使用
             if rate_opts['abs_noma'][k] <= rate_opts['sat'][k]:
                 constraints.append(x_noma[k] == 0)
-            # OMA weak only if better
+            # 仅当OMA弱用户更好时使用
             if rate_opts['abs_oma_weak'][k] <= rate_opts['sat'][k]:
                 constraints.append(y_weak[k] == 0)
-            # OMA strong only if better
+            # 仅当OMA强用户更好时使用
             if rate_opts['abs_oma_strong'][k] <= rate_opts['sat'][k]:
                 constraints.append(y_strong[k] == 0)
 
-        # Solve
+        # 求解
         problem = cp.Problem(objective, constraints)
 
         try:
@@ -229,11 +229,11 @@ class IntegerProgrammingDecision:
             try:
                 problem.solve(verbose=False)
             except Exception as e:
-                print(f"ILP solver failed: {e}")
+                print(f"ILP求解器失败：{e}")
                 return self.optimize_greedy(sat_pairs, abs_pairs, sat_gains, a2g_gains,
                                            Ps_dB, Pd, Bs, Bd)
 
-        # Extract decisions
+        # 提取决策
         decisions = []
         final_rate = 0.0
 
@@ -262,32 +262,32 @@ class IntegerProgrammingDecision:
     def optimize_greedy(self, sat_pairs, abs_pairs, sat_gains, a2g_gains,
                        Ps_dB, Pd, Bs, Bd):
         """
-        Greedy algorithm (fallback when cvxpy not available)
+        贪婪算法（当cvxpy不可用时的回退方案）
 
-        This is similar to original SATCON but with improved logic
+        类似于原始SATCON但具有改进的逻辑
 
-        Args:
-            [Same as optimize_ilp]
+        参数：
+            [与optimize_ilp相同]
 
-        Returns:
-            decisions: List of decisions
-            final_rate: Total rate
-            info: Optimization info
+        返回：
+            decisions: 决策列表
+            final_rate: 总速率
+            info: 优化信息
         """
         K = len(sat_pairs)
 
-        # Compute rate options
+        # 计算速率选项
         rate_opts = self.compute_rate_options(
             sat_pairs, abs_pairs, sat_gains, a2g_gains,
             Ps_dB, Pd, Bs, Bd
         )
 
-        # Greedy decision: for each pair, choose best option
+        # 贪婪决策：对于每对，选择最佳选项
         decisions = []
         final_rate = 0.0
 
         for k in range(K):
-            # Compare all options
+            # 比较所有选项
             options = {
                 'sat': rate_opts['sat'][k],
                 'noma': rate_opts['abs_noma'][k],
@@ -295,15 +295,15 @@ class IntegerProgrammingDecision:
                 'oma_strong': rate_opts['abs_oma_strong'][k]
             }
 
-            # Choose best
+            # 选择最佳
             best_mode = max(options, key=options.get)
             decisions.append(best_mode)
             final_rate += options[best_mode]
 
         info = {
-            'solver': 'Greedy',
+            'solver': '贪婪算法',
             'optimal_value': final_rate,
-            'status': 'success'
+            'status': '成功'
         }
 
         return decisions, final_rate, info
@@ -311,31 +311,31 @@ class IntegerProgrammingDecision:
     def optimize(self, sat_pairs, abs_pairs, sat_gains, a2g_gains,
                 Ps_dB, Pd, Bs, Bd):
         """
-        Main optimization interface
+        主优化接口
 
-        Automatically chooses ILP if available, otherwise greedy
+        如果可用则自动选择ILP，否则使用贪婪算法
 
-        Args:
-            sat_pairs: Satellite pairing
-            abs_pairs: ABS pairing
-            sat_gains: Satellite channel gains
-            a2g_gains: A2G channel gains
-            Ps_dB: Satellite power (dB)
-            Pd: ABS power (W)
-            Bs: Satellite bandwidth
-            Bd: ABS bandwidth
+        参数：
+            sat_pairs: 卫星配对
+            abs_pairs: ABS配对
+            sat_gains: 卫星信道增益
+            a2g_gains: A2G信道增益
+            Ps_dB: 卫星功率 (dB)
+            Pd: ABS功率 (W)
+            Bs: 卫星带宽
+            Bd: ABS带宽
 
-        Returns:
-            decisions: List of mode decisions for each pair
-            final_rate: Total system rate
-            info: Optimization info
+        返回：
+            decisions: 每对的模式决策列表
+            final_rate: 总系统速率
+            info: 优化信息
         """
         if self.use_ilp:
             try:
                 return self.optimize_ilp(sat_pairs, abs_pairs, sat_gains, a2g_gains,
                                         Ps_dB, Pd, Bs, Bd)
             except:
-                print("ILP failed, falling back to greedy")
+                print("ILP失败，回退到贪婪算法")
                 return self.optimize_greedy(sat_pairs, abs_pairs, sat_gains, a2g_gains,
                                            Ps_dB, Pd, Bs, Bd)
         else:
@@ -343,19 +343,19 @@ class IntegerProgrammingDecision:
                                        Ps_dB, Pd, Bs, Bd)
 
 
-# ==================== Test Code ====================
+# ==================== 测试代码 ====================
 def test_integer_programming_decision():
-    """Test integer programming decision optimizer"""
+    """测试整数规划决策优化器"""
     print("=" * 60)
-    print("Testing Integer Programming Decision Optimizer")
+    print("测试整数规划决策优化器")
     print("=" * 60)
 
-    # Generate test data
+    # 生成测试数据
     np.random.seed(42)
     sat_gains = np.random.exponential(0.01, size=config.N)
     a2g_gains = np.random.exponential(0.05, size=config.N)
 
-    # Add diversity
+    # 添加多样性
     for i in range(0, config.N, 4):
         if i+1 < config.N:
             sat_gains[i] *= 5.0
@@ -363,26 +363,26 @@ def test_integer_programming_decision():
             sat_gains[i+1] *= 0.2
             a2g_gains[i+1] *= 5.0
 
-    print(f"\nTest configuration:")
-    print(f"  Number of users: {config.N}")
-    print(f"  Number of pairs: {config.N // 2}")
-    print(f"  Solver available: {'ILP (cvxpy)' if CVXPY_AVAILABLE else 'Greedy (fallback)'}")
+    print(f"\n测试配置：")
+    print(f"  用户数量：{config.N}")
+    print(f"  配对数量：{config.N // 2}")
+    print(f"  可用求解器：{'ILP (cvxpy)' if CVXPY_AVAILABLE else '贪婪算法（回退）'}")
 
-    # Get pairing from baseline
+    # 从基线获取配对
     allocator = NOMAAllocator()
     sat_pairs, _ = allocator.optimal_user_pairing(sat_gains)
     abs_pairs, _ = allocator.optimal_user_pairing(a2g_gains)
 
-    # Test parameters
+    # 测试参数
     Bd = config.Bd_options[1]
     Ps_dB = 20
 
-    # Create optimizer
+    # 创建优化器
     optimizer = IntegerProgrammingDecision()
 
-    # Baseline: Greedy decision (per-pair local optimal)
+    # 基线：贪婪决策（每对局部最优）
     print(f"\n" + "-" * 60)
-    print("Baseline: Greedy decision (per-pair local optimal)")
+    print("基线：贪婪决策（每对局部最优）")
     print("-" * 60)
 
     decisions_greedy, rate_greedy, info_greedy = optimizer.optimize_greedy(
@@ -390,16 +390,16 @@ def test_integer_programming_decision():
         Ps_dB, config.Pd, config.Bs, Bd
     )
 
-    print(f"  Total rate: {rate_greedy/1e6:.2f} Mbps")
-    print(f"  Mode distribution:")
-    print(f"    Satellite: {decisions_greedy.count('sat')}")
-    print(f"    ABS NOMA: {decisions_greedy.count('noma')}")
-    print(f"    ABS OMA weak: {decisions_greedy.count('oma_weak')}")
-    print(f"    ABS OMA strong: {decisions_greedy.count('oma_strong')}")
+    print(f"  总速率：{rate_greedy/1e6:.2f} Mbps")
+    print(f"  模式分布：")
+    print(f"    卫星：{decisions_greedy.count('sat')}")
+    print(f"    ABS NOMA：{decisions_greedy.count('noma')}")
+    print(f"    ABS OMA弱用户：{decisions_greedy.count('oma_weak')}")
+    print(f"    ABS OMA强用户：{decisions_greedy.count('oma_strong')}")
 
-    # Proposed: Global optimization
+    # 提出方法：全局优化
     print(f"\n" + "-" * 60)
-    print("Proposed: Global optimization decision")
+    print("提出方法：全局优化决策")
     print("-" * 60)
 
     decisions_opt, rate_opt, info_opt = optimizer.optimize(
@@ -407,43 +407,43 @@ def test_integer_programming_decision():
         Ps_dB, config.Pd, config.Bs, Bd
     )
 
-    print(f"  Solver: {info_opt['solver']}")
-    print(f"  Total rate: {rate_opt/1e6:.2f} Mbps")
-    print(f"  Mode distribution:")
-    print(f"    Satellite: {decisions_opt.count('sat')}")
-    print(f"    ABS NOMA: {decisions_opt.count('noma')}")
-    print(f"    ABS OMA weak: {decisions_opt.count('oma_weak')}")
-    print(f"    ABS OMA strong: {decisions_opt.count('oma_strong')}")
+    print(f"  求解器：{info_opt['solver']}")
+    print(f"  总速率：{rate_opt/1e6:.2f} Mbps")
+    print(f"  模式分布：")
+    print(f"    卫星：{decisions_opt.count('sat')}")
+    print(f"    ABS NOMA：{decisions_opt.count('noma')}")
+    print(f"    ABS OMA弱用户：{decisions_opt.count('oma_weak')}")
+    print(f"    ABS OMA强用户：{decisions_opt.count('oma_strong')}")
 
-    # Performance comparison
+    # 性能对比
     print(f"\n" + "=" * 60)
-    print("Performance Comparison")
+    print("性能对比")
     print("=" * 60)
 
     improvement_abs = (rate_opt - rate_greedy) / 1e6
     improvement_pct = (rate_opt - rate_greedy) / rate_greedy * 100
 
-    print(f"\nBaseline (Greedy):")
-    print(f"  Rate: {rate_greedy/1e6:.2f} Mbps")
+    print(f"\n基线（贪婪算法）：")
+    print(f"  速率：{rate_greedy/1e6:.2f} Mbps")
 
-    print(f"\nProposed (Global Optimization):")
-    print(f"  Rate: {rate_opt/1e6:.2f} Mbps")
+    print(f"\n提出方法（全局优化）：")
+    print(f"  速率：{rate_opt/1e6:.2f} Mbps")
 
-    print(f"\nImprovement:")
-    print(f"  Absolute gain: {improvement_abs:.2f} Mbps")
-    print(f"  Relative gain: {improvement_pct:.2f}%")
+    print(f"\n改进幅度：")
+    print(f"  绝对增益：{improvement_abs:.2f} Mbps")
+    print(f"  相对增益：{improvement_pct:.2f}%")
 
-    # Validate
+    # 验证
     print(f"\n" + "=" * 60)
     if rate_opt >= rate_greedy * 0.99:
-        print("[PASS] Integer programming decision test PASSED")
-        print(f"  - Solver: {info_opt['solver']}")
+        print("[通过] 整数规划决策测试通过")
+        print(f"  - 求解器：{info_opt['solver']}")
         if rate_opt > rate_greedy:
-            print(f"  - Performance better than greedy (+{improvement_pct:.2f}%)")
+            print(f"  - 性能优于贪婪算法 (+{improvement_pct:.2f}%)")
         else:
-            print(f"  - Performance equal to greedy (local optimum)")
+            print(f"  - 性能等于贪婪算法（局部最优）")
     else:
-        print("[FAIL] Test FAILED")
+        print("[失败] 测试失败")
     print("=" * 60)
 
     return decisions_opt, rate_opt, info_opt

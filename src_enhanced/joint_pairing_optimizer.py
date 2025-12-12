@@ -1,24 +1,24 @@
 # -*- coding: utf-8 -*-
 """
-Joint User Pairing Optimizer
+联合用户配对优化器
 
-Core idea:
-- Original: Satellite and ABS pairing are independent
-- New: Joint optimization considering synergy effects
+核心思想：
+- 原始方法：卫星和ABS配对独立进行
+- 新方法：联合优化考虑协同效应
 
-Methods:
-1. Greedy + Local Search (recommended for N=32)
-2. Exhaustive search (only for N<=16, exponential complexity)
+方法：
+1. 贪婪 + 局部搜索（推荐用于N=32）
+2. 穷举搜索（仅用于N<=16，指数复杂度）
 
-Author: SATCON Enhancement Project
-Date: 2025-12-10
+作者：SATCON Enhancement Project
+日期：2025-12-10
 """
 import numpy as np
 from itertools import combinations
 import sys
 from pathlib import Path
 
-# Add project root to path
+# 将项目根目录添加到路径
 sys.path.append(str(Path(__file__).parent.parent))
 
 from config import config
@@ -27,25 +27,25 @@ from src.power_allocation import NOMAAllocator
 
 class JointPairingOptimizer:
     """
-    Joint Pairing Optimizer
+    联合配对优化器
 
-    Input:
-    - sat_gains: Satellite channel gains
-    - a2g_gains: A2G channel gains
-    - config: System configuration
+    输入：
+    - sat_gains: 卫星信道增益
+    - a2g_gains: A2G信道增益
+    - config: 系统配置
 
-    Output:
-    - sat_pairs: Optimal satellite pairing
-    - abs_pairs: Optimal ABS pairing
-    - joint_benefit: Joint benefit (sum rate)
+    输出：
+    - sat_pairs: 最优卫星配对
+    - abs_pairs: 最优ABS配对
+    - joint_benefit: 联合收益（总速率）
     """
 
     def __init__(self, config_obj):
         """
-        Initialize joint pairing optimizer
+        初始化联合配对优化器
 
-        Args:
-            config_obj: System configuration object
+        参数：
+            config_obj: 系统配置对象
         """
         self.config = config_obj
         self.allocator = NOMAAllocator()
@@ -53,51 +53,51 @@ class JointPairingOptimizer:
     def compute_joint_benefit(self, sat_pair_idx, abs_pair_idx,
                               sat_gains, a2g_gains, Ps_dB, Pd, Bs, Bd):
         """
-        Compute joint benefit for given pairing combination
+        计算给定配对组合的联合收益
 
-        Key: For each pair k, consider 4 hybrid decision options:
-        1. Both users use ABS NOMA
-        2. Weak user uses ABS OMA, strong user uses satellite
-        3. Weak user uses satellite, strong user uses ABS OMA
-        4. Both users use satellite NOMA
+        关键：对于每对k，考虑4种混合决策选项：
+        1. 两个用户都使用ABS NOMA
+        2. 弱用户使用ABS OMA，强用户使用卫星
+        3. 弱用户使用卫星，强用户使用ABS OMA
+        4. 两个用户都使用卫星NOMA
 
-        Args:
-            sat_pair_idx: Satellite pairing indices [(i1,j1), (i2,j2), ...]
-            abs_pair_idx: ABS pairing indices [(m1,n1), (m2,n2), ...]
-            sat_gains: Satellite channel gains [N]
-            a2g_gains: A2G channel gains [N]
-            Ps_dB: Satellite transmit power (dB)
-            Pd: ABS transmit power (W)
-            Bs, Bd: Satellite and ABS bandwidth
+        参数：
+            sat_pair_idx: 卫星配对索引 [(i1,j1), (i2,j2), ...]
+            abs_pair_idx: ABS配对索引 [(m1,n1), (m2,n2), ...]
+            sat_gains: 卫星信道增益 [N]
+            a2g_gains: A2G信道增益 [N]
+            Ps_dB: 卫星发射功率 (dB)
+            Pd: ABS发射功率 (W)
+            Bs, Bd: 卫星和ABS带宽
 
-        Returns:
-            total_rate: Total system rate (bps)
+        返回：
+            total_rate: 总系统速率 (bps)
 
-        Note:
-            This implements simplified per-pair hybrid decision.
-            Full global optimization will be in Module 3.
+        注意：
+            这实现了简化的每对混合决策。
+            完整的全局优化将在模块3中实现。
         """
         K = len(sat_pair_idx)
         Bs_per_pair = Bs / K
         Bd_per_pair = Bd / K
 
-        # Convert Ps from dB to W
+        # 将Ps从dB转换为W
         Ps = 10 ** (Ps_dB / 10)
 
         total_rate = 0.0
 
-        # Process each pair k and make hybrid decision
+        # 处理每对k并做出混合决策
         for k in range(K):
-            # Get satellite pair users
+            # 获取卫星配对用户
             sat_i, sat_j = sat_pair_idx[k]
             gamma_sat_i, gamma_sat_j = sat_gains[sat_i], sat_gains[sat_j]
 
-            # Ensure i is weak, j is strong for satellite
+            # 确保i是弱用户，j是强用户（对于卫星）
             if gamma_sat_i > gamma_sat_j:
                 sat_i, sat_j = sat_j, sat_i
                 gamma_sat_i, gamma_sat_j = gamma_sat_j, gamma_sat_i
 
-            # Compute satellite NOMA rates for this pair
+            # 计算此对的卫星NOMA速率
             beta_sat_j, beta_sat_i = self.allocator.compute_power_factors(
                 gamma_sat_j, gamma_sat_i, Ps
             )
@@ -105,16 +105,16 @@ class JointPairingOptimizer:
                                             (beta_sat_j * Ps * gamma_sat_i + 1))
             R_sat_j = Bs_per_pair * np.log2(1 + beta_sat_j * Ps * gamma_sat_j)
 
-            # Get ABS pair users (corresponding to same pair index k)
+            # 获取ABS配对用户（对应相同的配对索引k）
             abs_m, abs_n = abs_pair_idx[k]
             gamma_abs_m, gamma_abs_n = a2g_gains[abs_m], a2g_gains[abs_n]
 
-            # Ensure m is weak, n is strong for ABS
+            # 确保m是弱用户，n是强用户（对于ABS）
             if gamma_abs_m > gamma_abs_n:
                 abs_m, abs_n = abs_n, abs_m
                 gamma_abs_m, gamma_abs_n = gamma_abs_n, gamma_abs_m
 
-            # Compute ABS NOMA rates for this pair
+            # 计算此对的ABS NOMA速率
             beta_abs_n, beta_abs_m = self.allocator.compute_power_factors(
                 gamma_abs_n, gamma_abs_m, Pd
             )
@@ -122,39 +122,39 @@ class JointPairingOptimizer:
                                                   (beta_abs_n * Pd * gamma_abs_m + 1))
             R_abs_noma_n = Bd_per_pair * np.log2(1 + beta_abs_n * Pd * gamma_abs_n)
 
-            # Compute ABS OMA rates (each user gets full slot)
+            # 计算ABS OMA速率（每个用户获得完整时隙）
             R_abs_oma_m = Bd_per_pair * np.log2(1 + Pd * gamma_abs_m)
             R_abs_oma_n = Bd_per_pair * np.log2(1 + Pd * gamma_abs_n)
 
-            # Now make hybrid decision: choose best option for this pair
-            # Note: This assumes sat_i corresponds to abs_m (both weak in their systems)
-            #       and sat_j corresponds to abs_n (both strong in their systems)
+            # 现在做出混合决策：为此对选择最佳选项
+            # 注意：假设sat_i对应abs_m（在各自系统中都是弱用户）
+            #       sat_j对应abs_n（在各自系统中都是强用户）
 
-            # Option 1: Both users use ABS NOMA
+            # 选项1：两个用户都使用ABS NOMA
             rate_option1 = R_abs_noma_m + R_abs_noma_n
 
-            # Option 2: ABS OMA for weak user, satellite for strong user
-            # Map: abs_m (weak) uses ABS OMA, sat_j (strong) uses satellite
+            # 选项2：弱用户使用ABS OMA，强用户使用卫星
+            # 映射：abs_m（弱）使用ABS OMA，sat_j（强）使用卫星
             if abs_m == sat_i:  # Same user
                 rate_option2 = R_abs_oma_m + R_sat_j
             elif abs_m == sat_j:
                 rate_option2 = R_abs_oma_m + R_sat_i
             else:
-                rate_option2 = 0  # Different users, skip this option
+                rate_option2 = 0  # 不同用户，跳过此选项
 
-            # Option 3: ABS OMA for strong user, satellite for weak user
-            # Map: abs_n (strong) uses ABS OMA, sat_i (weak) uses satellite
+            # 选项3：强用户使用ABS OMA，弱用户使用卫星
+            # 映射：abs_n（强）使用ABS OMA，sat_i（弱）使用卫星
             if abs_n == sat_j:  # Same user
                 rate_option3 = R_sat_i + R_abs_oma_n
             elif abs_n == sat_i:
                 rate_option3 = R_sat_j + R_abs_oma_n
             else:
-                rate_option3 = 0  # Different users, skip this option
+                rate_option3 = 0  # 不同用户，跳过此选项
 
-            # Option 4: Both users use satellite NOMA
+            # 选项4：两个用户都使用卫星NOMA
             rate_option4 = R_sat_i + R_sat_j
 
-            # Choose best option
+            # 选择最佳选项
             pair_rate = max(rate_option1, rate_option2, rate_option3, rate_option4)
             total_rate += pair_rate
 
@@ -162,37 +162,37 @@ class JointPairingOptimizer:
 
     def optimize_greedy_with_local_search(self, sat_gains, a2g_gains):
         """
-        Greedy algorithm + Local search
+        贪婪算法 + 局部搜索
 
-        Algorithm:
-        1. Initial solution: Original SATCON (independent pairing)
-        2. Local search: Swap pairs to try improvement
-        3. Iterate until convergence
+        算法：
+        1. 初始解：原始SATCON（独立配对）
+        2. 局部搜索：交换配对尝试改进
+        3. 迭代直到收敛
 
-        Args:
-            sat_gains: [N] Satellite channel gains
-            a2g_gains: [N] A2G channel gains
+        参数：
+            sat_gains: [N] 卫星信道增益
+            a2g_gains: [N] A2G信道增益
 
-        Returns:
-            best_sat_pairs: Optimal satellite pairing
-            best_abs_pairs: Optimal ABS pairing
-            best_benefit: Best joint benefit
-            iterations: Number of iterations
+        返回：
+            best_sat_pairs: 最优卫星配对
+            best_abs_pairs: 最优ABS配对
+            best_benefit: 最佳联合收益
+            iterations: 迭代次数
         """
         N = len(sat_gains)
         K = N // 2
 
-        # Use default bandwidth
+        # 使用默认带宽
         Bd = self.config.Bd_options[1]  # 1.2 MHz
 
-        # Initial solution: Original independent pairing
+        # 初始解：原始独立配对
         sat_pairs_init, _ = self.allocator.optimal_user_pairing(sat_gains)
         abs_pairs_init, _ = self.allocator.optimal_user_pairing(a2g_gains)
 
         current_sat_pairs = sat_pairs_init.copy()
         current_abs_pairs = abs_pairs_init.copy()
 
-        # Use SNR = 20 dB for testing
+        # 使用SNR = 20 dB进行测试
         Ps_dB = 20  # dB
 
         current_benefit = self.compute_joint_benefit(
@@ -210,11 +210,11 @@ class JointPairingOptimizer:
             improved = False
             iterations += 1
 
-            # Try swapping satellite pairs
+            # 尝试交换卫星配对
             for k1 in range(K):
                 for k2 in range(k1+1, K):
-                    # Swap one user between pair k1 and k2
-                    new_sat_pairs = [list(p) for p in current_sat_pairs]  # Deep copy
+                    # 在配对k1和k2之间交换一个用户
+                    new_sat_pairs = [list(p) for p in current_sat_pairs]  # 深拷贝
                     new_sat_pairs[k1] = [current_sat_pairs[k1][0], current_sat_pairs[k2][1]]
                     new_sat_pairs[k2] = [current_sat_pairs[k2][0], current_sat_pairs[k1][1]]
 
@@ -230,10 +230,10 @@ class JointPairingOptimizer:
                         current_benefit = new_benefit
                         improved = True
 
-            # Try swapping ABS pairs
+            # 尝试交换ABS配对
             for k1 in range(K):
                 for k2 in range(k1+1, K):
-                    new_abs_pairs = [list(p) for p in current_abs_pairs]  # Deep copy
+                    new_abs_pairs = [list(p) for p in current_abs_pairs]  # 深拷贝
                     new_abs_pairs[k1] = [current_abs_pairs[k1][0], current_abs_pairs[k2][1]]
                     new_abs_pairs[k2] = [current_abs_pairs[k2][0], current_abs_pairs[k1][1]]
 
@@ -253,17 +253,17 @@ class JointPairingOptimizer:
 
     def optimize(self, sat_gains, a2g_gains):
         """
-        Main optimization interface
+        主优化接口
 
-        Args:
-            sat_gains: [N] Satellite channel gains
-            a2g_gains: [N] A2G channel gains
+        参数：
+            sat_gains: [N] 卫星信道增益
+            a2g_gains: [N] A2G信道增益
 
-        Returns:
-            sat_pairs: Optimal satellite pairing
-            abs_pairs: Optimal ABS pairing
-            benefit: Joint benefit
-            info: Optimization info dict
+        返回：
+            sat_pairs: 最优卫星配对
+            abs_pairs: 最优ABS配对
+            benefit: 联合收益
+            info: 优化信息字典
         """
         sat_pairs, abs_pairs, benefit, iterations = \
             self.optimize_greedy_with_local_search(sat_gains, a2g_gains)
@@ -276,43 +276,43 @@ class JointPairingOptimizer:
         return sat_pairs, abs_pairs, benefit, info
 
 
-# ==================== Test Code ====================
+# ==================== 测试代码 ====================
 def test_joint_pairing():
-    """Test joint pairing optimizer"""
+    """测试联合配对优化器"""
     print("=" * 60)
-    print("Testing Joint Pairing Optimizer")
+    print("测试联合配对优化器")
     print("=" * 60)
 
-    # Generate test channel gains with MORE diversity
-    # to create strong opportunities for joint optimization
+    # 生成具有更多多样性的测试信道增益
+    # 以创建联合优化的强机会
     np.random.seed(42)
 
-    # Create diverse channel conditions
-    # Some users have good satellite but bad A2G
-    # Some users have bad satellite but good A2G
+    # 创建多样化的信道条件
+    # 一些用户拥有良好的卫星但较差的A2G
+    # 一些用户拥有较差的卫星但良好的A2G
     sat_gains = np.random.exponential(0.01, size=config.N)
     a2g_gains = np.random.exponential(0.05, size=config.N)
 
-    # Add STRONG diversity: create clear specialization
+    # 添加强多样性：创建明确的专业化
     for i in range(0, config.N, 4):
         if i+1 < config.N:
-            # User i: VERY good sat, VERY bad A2G
-            sat_gains[i] *= 5.0  # Strong satellite
-            a2g_gains[i] *= 0.2  # Weak A2G
-            # User i+1: VERY bad sat, VERY good A2G
-            sat_gains[i+1] *= 0.2  # Weak satellite
-            a2g_gains[i+1] *= 5.0  # Strong A2G
+            # 用户i：非常好的卫星，非常差的A2G
+            sat_gains[i] *= 5.0  # 强卫星
+            a2g_gains[i] *= 0.2  # 弱A2G
+            # 用户i+1：非常差的卫星，非常好的A2G
+            sat_gains[i+1] *= 0.2  # 弱卫星
+            a2g_gains[i+1] *= 5.0  # 强A2G
 
-    print(f"\nTest configuration:")
-    print(f"  Number of users: {config.N}")
-    print(f"  Number of pairs: {config.N // 2}")
+    print(f"\n测试配置：")
+    print(f"  用户数量：{config.N}")
+    print(f"  配对数量：{config.N // 2}")
 
-    # Create optimizer
+    # 创建优化器
     optimizer = JointPairingOptimizer(config)
 
-    # Baseline: Independent pairing (original SATCON)
+    # 基线：独立配对（原始SATCON）
     print(f"\n" + "-" * 60)
-    print("Baseline: Independent pairing (Original SATCON)")
+    print("基线：独立配对（原始SATCON）")
     print("-" * 60)
 
     allocator = NOMAAllocator()
@@ -320,7 +320,7 @@ def test_joint_pairing():
     abs_pairs_old, _ = allocator.optimal_user_pairing(a2g_gains)
 
     Bd = config.Bd_options[1]  # 1.2 MHz
-    Ps_dB = 20  # Use SNR = 20 dB for testing
+    Ps_dB = 20  # 使用SNR = 20 dB进行测试
 
     benefit_old = optimizer.compute_joint_benefit(
         sat_pairs_old, abs_pairs_old,
@@ -328,54 +328,54 @@ def test_joint_pairing():
         Ps_dB, config.Pd, config.Bs, Bd
     )
 
-    print(f"  Total rate: {benefit_old/1e6:.2f} Mbps")
-    print(f"  Satellite pairs: {len(sat_pairs_old)} pairs")
-    print(f"  ABS pairs: {len(abs_pairs_old)} pairs")
+    print(f"  总速率：{benefit_old/1e6:.2f} Mbps")
+    print(f"  卫星配对：{len(sat_pairs_old)} 对")
+    print(f"  ABS配对：{len(abs_pairs_old)} 对")
 
-    # New method: Joint optimization
+    # 新方法：联合优化
     print(f"\n" + "-" * 60)
-    print("New Method: Joint pairing optimization")
+    print("新方法：联合配对优化")
     print("-" * 60)
-    print(f"Running local search optimization...")
+    print(f"运行局部搜索优化...")
 
     sat_pairs_new, abs_pairs_new, benefit_new, info = optimizer.optimize(
         sat_gains, a2g_gains
     )
 
-    print(f"\nOptimization results:")
-    print(f"  Total rate: {benefit_new/1e6:.2f} Mbps")
-    print(f"  Iterations: {info['iterations']}")
+    print(f"\n优化结果：")
+    print(f"  总速率：{benefit_new/1e6:.2f} Mbps")
+    print(f"  迭代次数：{info['iterations']}")
 
-    # Performance comparison
+    # 性能对比
     print(f"\n" + "=" * 60)
-    print("Performance Comparison")
+    print("性能对比")
     print("=" * 60)
 
     improvement_abs = (benefit_new - benefit_old) / 1e6
     improvement_pct = (benefit_new - benefit_old) / benefit_old * 100
 
-    print(f"\nBaseline (Independent pairing):")
-    print(f"  Rate: {benefit_old/1e6:.2f} Mbps")
+    print(f"\n基线（独立配对）：")
+    print(f"  速率：{benefit_old/1e6:.2f} Mbps")
 
-    print(f"\nProposed (Joint optimization):")
-    print(f"  Rate: {benefit_new/1e6:.2f} Mbps")
+    print(f"\n提出方法（联合优化）：")
+    print(f"  速率：{benefit_new/1e6:.2f} Mbps")
 
-    print(f"\nImprovement:")
-    print(f"  Absolute gain: {improvement_abs:.2f} Mbps")
-    print(f"  Relative gain: {improvement_pct:.2f}%")
+    print(f"\n改进幅度：")
+    print(f"  绝对增益：{improvement_abs:.2f} Mbps")
+    print(f"  相对增益：{improvement_pct:.2f}%")
 
-    # Validate success
+    # 验证成功
     print(f"\n" + "=" * 60)
-    if benefit_new >= benefit_old * 0.99:  # Allow small numerical error
-        print("[PASS] Joint pairing optimizer test PASSED")
-        print(f"  - Joint optimization converged in {info['iterations']} iterations")
+    if benefit_new >= benefit_old * 0.99:  # 允许小的数值误差
+        print("[通过] 联合配对优化器测试通过")
+        print(f"  - 联合优化在 {info['iterations']} 次迭代中收敛")
         if benefit_new > benefit_old:
-            print(f"  - Performance better than baseline (+{improvement_pct:.2f}%)")
+            print(f"  - 性能优于基线 (+{improvement_pct:.2f}%)")
         else:
-            print(f"  - Performance equal to baseline (local optimum)")
+            print(f"  - 性能等于基线（局部最优）")
     else:
-        print("[FAIL] Test FAILED")
-        print(f"  - Performance worse than baseline ({improvement_pct:.2f}%)")
+        print("[失败] 测试失败")
+        print(f"  - 性能劣于基线 ({improvement_pct:.2f}%)")
     print("=" * 60)
 
     return sat_pairs_new, abs_pairs_new, benefit_new, info
