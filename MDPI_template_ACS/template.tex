@@ -179,28 +179,65 @@ In the context of HSTNs, the unmanned aerial vehicle (UAV)-based communications 
 All-in-all, and to the best of our knowledge, no studies can be found related to the intelligent integration of aerial and satellite segments in 6G networks by utilizing a hybrid NOMA and orthogonal multiple access (OMA) transmission schemes. Motivated by this observation, in this paper, we propose a novel satellite aerial terrestrial cooperative network scheme, which will be termed SATCON. More specifically, SATCON is formed with the integration of aerial base station (ABS) in the existing satellite network by efficiently combining two unsupervised machine learning (ML) algorithms, namely k-means and k-medoids. Furthermore, the proposed system promotes efficient cooperation between ABS and satellite through an innovative hybrid NOMA/OMA approach, avoiding the waste of resources and energy.Compared to standalone satellite NOMA transmission with optimal user pairing, namely SAT-NOMA, SATCON increases the sum rate and, at the same time, provides higher spectral efficiency for varying satellite channel conditions and ABS bandwidth.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Materials and Methods}
-\subsection{Topology}
 
-A network consisting of a VLEO satellite as part of a VLEO satellite constellation, an ABS, and $N=2K$ mobile terminals (MTs), uniformly distributed within the ABS coverage area W is considered.Furthermore, the ABS and the MTs are within the coverage area of the VLEO satellite.Each $M_i \quad (1 \le i \le N)$ has coordinates $U = \{u_1, u_2, \ldots, u_N\} \in W$, where $u_i = (x_i^{u},\, y_i^{u},\, z_i^{u})$. The MTs receive their data directly via the satellite link and through the decode and forward (DF) ABS relay, via the air to ground (A2G) link. The satellite is equipped with an antenna with transmit gain $G_t^s$, and total available transmit power $P_s$. Also, the satellite downlink operates at a frequency $f_s$, and the total available bandwidth is $B_s$.Furthermore, the ABS is equipped with two antennas, one for the reception of the satellite signals via the satellite to air (S2A) link (with an antenna gain denoted as $G_r^sd$) and one for re-transmitting the satellite signals to the MTs via the A2G link (with a gain $G_t^d$). The operating frequency of the A2G links, i.e., between ABS and MTs, is $f_d \neq f_s$, and the total available bandwidth is $B_d$. Each $MT_i$ has two antennas, one for the reception of the satellite signal with gain $G_r^s$ and another for the reception of the ABS signal with gain $G_r^d$.The A2G and satellite signals are received by the MTs simultaneously.
+As shown in Figure~\ref{fig:system_model}, the considered SAGIN consists of $\mathbf{U}$ UAVs denoted by $\mathcal{U} = {1, 2, \dots, U}$ and $\mathbf{S}$ LEO satellites indicated by $\mathcal{S} = {1, 2, \dots, S}$. In addition, $\mathbf{K}$ IoT devices randomly scattered on the ground are represented as $\mathcal{K} = {1, 2, \dots, K}$.
 
-From the system point of view, we consider a zero touch commissioning (ZTC) cloud radio access network (C-RAN) model consisting of a control element that performs automated resource discovery and manages the ZTC procedures in the cloud control center, such as the instantiation, configuration, and synchronization of SATCON.Finally, the formed ondemand 6G network consists of ultra-reliable low latency communication (URLLC) and enhanced mobile broadband (eMBB) network slices responsible for routing the control and data plane information, respectively.
+In the downlink, UEs may receive data either directly from the LEO satellite or through a UAV-assisted relaying link over the air-to-ground (A2G) channel. Satellite-side user pairing is first established based on direct downlink transmission, which serves as the reference for subsequent transmission decisions.Under this pairing, UAV-assisted transmission is activated only when it can provide a strict rate improvement over direct satellite delivery. Specifically, if both paired users achieve higher downlink rates via the UAV, UAV-assisted NOMA transmission is employed. If only one user benefits from UAV relaying, UAV-assisted OMA transmission is selectively applied to that user in order to avoid any performance degradation of the other. Otherwise, when UAV-assisted transmission cannot outperform direct satellite transmission for either user, both users are served directly by the satellite.
 
-\subsection{Channel model}
-The fading environment for the land mobile satellite (LMS) channel is described through the Loo’s model distribution, where the power of the LoS component is log-normally distributed with parameters $(\alpha, \psi)$, while the power of the multipath component (MP) follows the Rayleigh distribution with the channel complex coefficient being represented by $h_i^s$ for each $MT_i$ assuming zero mean and variance $\sigma_s = \sqrt{0.5 \cdot 10^{\mathrm{MP}/10}} \sim \mathcal{N}(0, \sigma_s^{2})$.Also, path loss attenuation using the free space path loss (FSL) model is considered being denoted as $L_i^{FS}$ for each $MT_i$.In addition, a maximum Doppler shift of 40 kHz is assumed and modeled with the Jakes model.
 
-Regarding the A2G link between the ABS and the MTs, the multipath fading is modeled by the Rayleigh distribution with zero mean and unit variance $\sim \mathcal{N}(0,1)$. The channel complex coefficient is $h_i^d$ for each $MT_i$. Also, path loss attenuation of the ABS’s signal is modeled using the elevation angle based path loss model, in an urban environment, and it is expressed as follows
+% Figure 1
+\begin{figure}[!htbp]
+\centering
+\includegraphics[width=0.95\columnwidth]{Definitions/figure1}
+\caption{Illustration of the uplink communication procedure in SAGIN, where UAVs act as aerial aggregators to collect data from spatially distributed IoT devices and subsequently offload the aggregated data to LEO satellites.}
+\label{fig:system_model}
+\end{figure}
+
+To characterize the downlink transmission options described above, the satellite downlink is modeled using a land mobile satellite(LMS)  channel. The overall channel coefficient between LEO satellite $s$ and UE $i$ is expressed as
 \begin{equation}
-L_i^{\mathrm{A2G}}(h, r_i)
-= 20 \log\left( \frac{4 \pi y_i f_d}{c} \right)
-+ \eta_{\mathrm{LoS}} P_{\mathrm{LoS}}(h, r_i)
-+ \eta_{\mathrm{NLoS}} \bigl(1 - P_{\mathrm{LoS}}(h, r_i)\bigr),
+h_i^s = \sqrt{L_i^s} \cdot g_i^s,
 \end{equation}
-where $h$ is the altitude of the ABS, $r_i$ is the 2D Euclidean distance between ABS and $MT_i$, $y_i = \sqrt{r_i^2 + h^2}
-$ is the direct link that connects the ABS and the $MT_i$, and $c$ is the speed of light. Moreover, $P_LoS$ denotes the LoS probability between the ABS and $MT_i$ and $\eta_{\mathrm{LoS}}$ are the coefficients describing the propagation environment. In addition, concerning the S2A channel between the satellite and the ABS, the path loss attenuation is modeled using the FSL model and it is denoted as $L_{sd}^{FS}$.
+where $L_i^s$ represents the large-scale free-space path loss given by
+\begin{equation}
+L_i^s = \left(\frac{c}{4\pi f_c d_i^s}\right)^2,
+\end{equation}
+with $f_c$ denoting the carrier frequency, $d_i^s$ the satellite-to-UE distance, and $c$ the speed of light.
 
-Furthermore, the LMS, A2G, and S2A links are degraded by additive white Gaussian noise (AWGN). The noise power is calculated as the product of the Boltzmann constant $\kappa$, the receiver system temperature $T_g$, where $g = \{s, d\}$ and the available bandwidth $B_g$.Thus, the noise power of the satellite and aerial receiver at each MT is equal to and $N_s = \kappa T_s B_s
-$ and $N_s = \kappa T_s B_s$, respectively. Additionally, the noise power of the satellite receiver at ABS is $N_{sd} = \kappa T_{sd} B_s$.
+The small-scale fading coefficient $g_i^s$ follows the Loo model,characterizing the composite fading as a superposition of a dominant line-of-sight (LoS) component and multipath fading
+\begin{equation}
+g_i^s(t) = A_i(t)e^{j\phi_i(t)} + m_i(t),
+\end{equation}
+where $A_i(t)$ represents the LoS amplitude with $20\log_{10}A_i(t) \sim \mathcal{N}(\mu, \sigma^2)$, and $m_i(t) = m_{I,i}(t) + jm_{Q,i}(t)$ denotes the multipath component with $m_{I,i}, m_{Q,i} \sim \mathcal{N}(0, \sigma_m^2)$.The parameters are set as $\mu = -1$ dB, $\sigma = 2$ dB, corresponding to a suburban environment.
 
+Furthermore, the Doppler effect induced by satellite motion is captured using the classical Jakes spectrum with maximum Doppler shift $f_D = v f_c / c$, where $v$ denotes the relative velocity between the satellite and UE.
+
+For UAV-assisted transmission, data are forwarded to UEs through an air-to-ground (A2G) link. The channel coefficient between the UAV and UE $i$ is denoted by $h_i^d$ and can be expressed as
+\begin{equation}
+h_i^d = \sqrt{L_i^{\text{A2G}}} \cdot g_i^d,
+\end{equation}
+where $L_i^{\text{A2G}}$ represents the large-scale path loss and $g_i^d$ denotes the small-scale fading.
+
+Following the elevation-angle-dependent model by Al-Hourani \emph{et al.}~\cite{al2014modeling}, the path loss accounts for probabilistic LoS and NLoS propagation in urban environments. The LoS probability is given by
+\begin{equation}
+P_{\text{LoS}}(\theta_i) = \frac{1}{1 + a \exp(-b[\theta_i - a])},
+\end{equation}
+where $\theta_i = \arcsin(H/\sqrt{H^2 + d_i^2})$ is the elevation angle, $H$ is the UAV altitude, $d_i$ is the horizontal distance, and $(a, b)$ are environment-dependent parameters. For urban environments, we adopt $a = 9.61$ and $b = 0.16$~\cite{al2014modeling}.
+
+The composite path loss is then computed as
+\begin{equation}
+L_i^{\text{A2G}} = P_{\text{LoS}}(\theta_i) \cdot L_i^{\text{LoS}} 
++ [1-P_{\text{LoS}}(\theta_i)] \cdot L_i^{\text{NLoS}},
+\end{equation}
+where
+\begin{align}
+L_i^{\text{LoS}}\text{(dB)} &= 20\log_{10}\left(\frac{4\pi f_c d_i^{\text{3D}}}{c}\right) + \eta_{\text{LoS}}, \\
+L_i^{\text{NLoS}}\text{(dB)} &= 20\log_{10}\left(\frac{4\pi f_c d_i^{\text{3D}}}{c}\right) + \eta_{\text{NLoS}},
+\end{align}
+with $d_i^{\text{3D}} = \sqrt{H^2 + d_i^2}$ denoting the 3D distance, and $\eta_{\text{LoS}} = 1$ dB, $\eta_{\text{NLoS}} = 20$ dB representing the excessive path loss for LoS and NLoS links, respectively~\cite{al2014modeling}.
+
+It should be emphasized that the downlink rate delivered to a UE via UAV-assisted relaying is jointly determined by the A2G access link and the satellite-to-UAV (S2A) backhaul. Since the UAV can only forward the data it receives from the satellite, the capacity of the S2A backhaul may limit the effective downlink rate, preventing UAV-assisted transmission from consistently outperforming direct satellite delivery.
+
+All downlink links are assumed to be impaired by additive white Gaussian noise (AWGN). These channel characteristics explain why UAV-assisted relaying may provide significant rate gains for some users while offering no advantage for others, thereby motivating rate-based downlink transmission mode selection.
 \section{SATCON}
 \subsection{ABS placement process}
 For the intelligent integration of the ABS into the existing satellite network, the combination of the k-means and kmedoids unsupervised ML methods is utilized. The two algorithms aim to find the point $p \in W$ where $p = (x_1^{p},\, y_1^{p},\, z_1^{p})
@@ -611,6 +648,10 @@ Author 1, A.B.; Author 2, C.D.; Author 3, E.F. Title of presentation. In Proceed
 % Reference 7
 \bibitem{ref-thesis}
 Author 1, A.B. Title of Thesis. Level of Thesis, Degree-Granting University, Location of University, Date of Completion.
+% Reference 8
+\bibitem{al2014modeling}
+Al-Hourani, A.; Kandeepan, S.; Lardner, S.Optimal LAP Altitude for Maximum Coverage.{\em IEEE Wireless Commun. Lett.} {\bf 2014}, {\em 3}, 569--572.
+
 \end{thebibliography}
 
 % If authors have biography, please use the format below
