@@ -214,6 +214,7 @@ Furthermore, the Doppler effect induced by satellite motion is captured using th
 For UAV-assisted transmission, data are forwarded to UEs through an air-to-ground (A2G) link. The channel coefficient between the UAV and UE $i$ is denoted by $h_i^d$ and can be expressed as
 \begin{equation}
 h_i^d = \sqrt{L_i^{\text{A2G}}} \cdot g_i^d,
+\label{eq:channel coefficient}
 \end{equation}
 where $L_i^{\text{A2G}}$ represents the large-scale path loss and $g_i^d$ denotes the small-scale fading.
 
@@ -232,21 +233,52 @@ where
 \begin{align}
 L_i^{\text{LoS}}\text{(dB)} &= 20\log_{10}\left(\frac{4\pi f_c d_i^{\text{3D}}}{c}\right) + \eta_{\text{LoS}}, \\
 L_i^{\text{NLoS}}\text{(dB)} &= 20\log_{10}\left(\frac{4\pi f_c d_i^{\text{3D}}}{c}\right) + \eta_{\text{NLoS}},
+\label{eq:path loss}
 \end{align}
 with $d_i^{\text{3D}} = \sqrt{H^2 + d_i^2}$ denoting the 3D distance, and $\eta_{\text{LoS}} = 1$ dB, $\eta_{\text{NLoS}} = 20$ dB representing the excessive path loss for LoS and NLoS links, respectively~\cite{al2014modeling}.
 
 It should be emphasized that the downlink rate delivered to a UE via UAV-assisted relaying is jointly determined by the A2G access link and the satellite-to-UAV (S2A) backhaul. Since the UAV can only forward the data it receives from the satellite, the capacity of the S2A backhaul may limit the effective downlink rate, preventing UAV-assisted transmission from consistently outperforming direct satellite delivery.
 
 All downlink links are assumed to be impaired by additive white Gaussian noise (AWGN). These channel characteristics explain why UAV-assisted relaying may provide significant rate gains for some users while offering no advantage for others, thereby motivating rate-based downlink transmission mode selection.
-\section{SATCON}
-\subsection{ABS placement process}
-For the intelligent integration of the ABS into the existing satellite network, the combination of the k-means and kmedoids unsupervised ML methods is utilized. The two algorithms aim to find the point $p \in W$ where $p = (x_1^{p},\, y_1^{p},\, z_1^{p})
-$ so that the sum of the distances of the users from this point is minimized. The total within-cluster dissimilarity of the kmeans c and k-medoids m algorithms is $A_q = \sum_{u_i \in U} \lVert u_i - p_q \rVert^{2}$, where $q = \{c, m\}$. The objective of these two methods is to determine the point $p_q$ that minimizes $A_q$ and it can be expressed as follows
-\begin{equation}
-\arg\min_{p_q \in W} \; \sum_{u_i \in U} \|u_i - p_q\|^{2}.
-\end{equation}
 
-From the two suggested points, $p_c$ and $p_m$, given from kmeans and k-medoids, respectively,if $A_c < A_m$ then $p=p_c$, otherwise $p=p_m$.Due to the nature of these two ML methods to create groups through the input data, i.e., the coordinates of the users $U$, the initial height of the ABS will be the same as the average height of the users. Therefore, to obtain the optimal altitude at which ABS provides the best quality of service (QoS) to the MTs, first, we should identify the farther $MT_i$ from the point $p$, where ABS is placed. Thereinafter, we should determine the height of the ABS $h$ where pathloss with the $MT_i$ is minimized through solving $\frac{\partial L_i^{\mathrm{A2G}}(h, r_i)}{\partial h} = 0$.
+\subsection{ABS placement process}
+
+The ABS placement is performed prior to the hybrid transmission decision, since the A2G channel characteristics—and consequently the achievable UAV-assisted rates—are fundamentally determined by the ABS position. Without an appropriately optimized ABS location, the hybrid NOMA/OMA decision would be restricted to a limited set of feasible transmission options, leading to suboptimal system performance.
+
+To facilitate effective hybrid NOMA/OMA downlink decision-making, the ABS placement is designed as a performance-aware structural optimization step rather than an isolated objective. Specifically, the three-dimensional ABS position $\mathbf{p} = (x_1^{p}, y_1^{p}, z_1^{p})$ is optimized to enhance the quality of the air-to-ground (A2G) channels, which directly determine the achievable UAV-assisted transmission rates. By improving the overall A2G channel conditions through position optimization, the proposed placement strategy enlarges the set of users for which UAV-assisted transmission can provide rate advantages over direct satellite delivery, thereby enabling more effective hybrid NOMA/OMA transmission decisions in the subsequent stage.It is worth noting that the placement optimization does not determine the transmission mode itself, but rather provides a favorable channel structure upon which the subsequent rate-based hybrid decision operates.
+Based on the above considerations, the ABS placement is formulated as a preliminary, performance-aware optimization step that aims to enhance the air-to-ground (A2G) channel conditions prior to the hybrid transmission decision. Specifically, the three-dimensional ABS position $\mathbf{p} \in W$ is determined by maximizing the aggregate A2G downlink rate experienced by terrestrial users, which is expressed as
+\begin{equation}
+\underset{\mathbf{p} \in W}{\arg\max} \sum_{i \in \mathcal{K}} R_i^d(\mathbf{p}),
+\label{eq:abs_placement_obj}
+\end{equation}
+where $W$ denotes the feasible spatial region for ABS deployment, and $R_i^d(\mathbf{p})$ represents the achievable A2G downlink rate for $\mathrm{IoT}_i$ when the ABS is positioned at $\mathbf{p}$. Since the subsequent hybrid NOMA/OMA transmission decision involves discrete user pairing and mode selection, a continuous and differentiable surrogate is adopted during the placement phase. In particular, the OMA transmission rate is used as a proxy for the A2G channel quality, given by
+\begin{equation}
+R_i^d(\mathbf{p}) = B_d \log_2 \left( 1 + P_d \Gamma_i^d(\mathbf{p}) \right),
+\label{eq:oma_surrogate}
+\end{equation}
+where $B_d$ denotes the allocated A2G bandwidth, $P_d$ is the transmission power of the ABS, and $\Gamma_i^d(\mathbf{p})$ is the channel gain experienced by $\mathrm{IoT}_i$, which explicitly depends on the ABS position $\mathbf{p}$. 
+By optimizing \eqref{eq:abs_placement_obj} with respect to $\mathbf{p}$, the proposed placement strategy improves the overall A2G channel quality, thereby providing a favorable rate landscape for the subsequent hybrid NOMA/OMA downlink decision.
+
+The channel gain $\Gamma_i^d(\mathbf{p})$ is determined by the A2G channel model, and depends explicitly on the ABS position $\mathbf{p}$ through the elevation-angle-dependent path loss and the associated line-of-sight probability. In particular, both the horizontal distance between the ABS and $\mathrm{IoT}_i$ and the ABS altitude jointly influence the large-scale attenuation, which in turn affects the achievable A2G downlink rate.
+
+
+The ABS position is restricted by the physical service area and practical deployment constraints of the considered system. Specifically, the horizontal coordinates of the ABS are confined within the coverage region of radius $R_{\text{cov}}$, while the altitude is limited to a feasible range $[z_{\text{min}}, z_{\text{max}}]$ to ensure reliable communication performance and compliance with regulatory requirements. These constraints can be expressed as
+\begin{equation}
+\begin{aligned}
+    -R_{\text{cov}} &\leq x_1^{p} \leq R_{\text{cov}}, \\
+    -R_{\text{cov}} &\leq y_1^{p} \leq R_{\text{cov}}, \\
+    z_{\text{min}} &\leq z_1^{p} \leq z_{\text{max}},
+\end{aligned}
+\label{eq:position_constraints}
+\end{equation}
+where $R_{\text{cov}}$ denotes the horizontal coverage radius of the service area, and $[z_{\text{min}}, z_{\text{max}}]$ represents the permissible altitude range for ABS deployment, typically set to $[50~\text{m}, 500~\text{m}]$.
+
+The ABS placement problem in~\eqref{eq:abs_placement_obj} is solved using the Limited-memory Broyden--Fletcher--Goldfarb--Shanno with Box constraints (L-BFGS-B) algorithm, which is suitable for bound-constrained nonlinear optimization. 
+Starting from an initial position $\mathbf{p}_0$ defined by the geometric centroid of the user distribution in the horizontal plane with a default altitude of $100~\text{m}$, the algorithm iteratively updates the ABS location based on gradient information until convergence. The convergence tolerance is set to $\epsilon = 10^{-6}$ on the objective function value, with a maximum iteration limit of $100$ to ensure computational efficiency.
+
+During the placement phase, the OMA rate in~\eqref{eq:oma_surrogate} is adopted as a continuous and differentiable surrogate, since the hybrid NOMA/OMA transmission scheme involves discrete user pairing and successive interference cancellation (SIC) operations that are not suitable for gradient-based optimization. The use of the OMA rate allows the placement optimization to focus on improving the A2G channel conditions without imposing any transmission mode decisions.
+
+The optimized ABS position obtained from this procedure is subsequently used as the deployment configuration for the hybrid NOMA/OMA downlink transmission.
 
 \subsection{Satellite NOMA transmission}
 
