@@ -40,6 +40,7 @@ from src.power_allocation import NOMAAllocator
 from src_enhanced.gradient_position_optimizer import GradientPositionOptimizer
 from src_enhanced.joint_pairing_optimizer import JointPairingOptimizer
 from src_enhanced.integer_programming_decision import IntegerProgrammingDecision
+from src_enhanced.resource_constrained_decision import ResourceConstrainedDecision
 
 
 class JointOptimizationSATCON:
@@ -51,7 +52,8 @@ class JointOptimizationSATCON:
     """
 
     def __init__(self, config_obj, abs_bandwidth,
-                 use_module1=True, use_module2=True, use_module3=True):
+                 use_module1=True, use_module2=True, use_module3=True,
+                 max_abs_users=None, max_s2a_capacity=None, enforce_fairness=False):
         """
         初始化联合优化SATCON系统
 
@@ -61,6 +63,9 @@ class JointOptimizationSATCON:
             use_module1: 启用梯度位置优化
             use_module2: 启用联合配对优化
             use_module3: 启用整数规划决策
+            max_abs_users: ABS最大同时服务用户对数（资源约束）
+            max_s2a_capacity: S2A回程最大容量，单位bps（资源约束）
+            enforce_fairness: 是否强制公平性约束
         """
         self.config = config_obj
         self.Bd = abs_bandwidth
@@ -69,6 +74,11 @@ class JointOptimizationSATCON:
         self.use_module1 = use_module1
         self.use_module2 = use_module2
         self.use_module3 = use_module3
+
+        # 资源约束参数（方案A）
+        self.max_abs_users = max_abs_users
+        self.max_s2a_capacity = max_s2a_capacity
+        self.enforce_fairness = enforce_fairness
 
         # 初始化基础系统
         self.sat_noma = SatelliteNOMA(config_obj)
@@ -84,7 +94,16 @@ class JointOptimizationSATCON:
             self.pairing_optimizer = JointPairingOptimizer(config_obj)
 
         # 总是初始化决策优化器（即使基线也需要）
-        self.decision_optimizer = IntegerProgrammingDecision()
+        # 如果有资源约束，使用ResourceConstrainedDecision
+        if max_abs_users is not None or max_s2a_capacity is not None:
+            self.decision_optimizer = ResourceConstrainedDecision(
+                max_abs_users=max_abs_users,
+                max_s2a_capacity=max_s2a_capacity,
+                use_ilp=True,
+                enforce_fairness=enforce_fairness
+            )
+        else:
+            self.decision_optimizer = IntegerProgrammingDecision()
 
         # 如果模块禁用则回退到原始方法
         from src.abs_placement import ABSPlacement

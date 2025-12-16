@@ -282,37 +282,103 @@ The optimized ABS position obtained from this procedure is subsequently used as 
 
 \subsection{Satellite NOMA transmission}
 
-For the satellite transmission, each $M T_l \ (1 \le l \le N)$ periodically reports the channel state information (CSI) of the LMS channel to the satellite that receives the complex channel coefficient $h_l^s$ and calculates the channel gain including additional gains, losses, and the noise power of the satellite receiver $N_s$ as
+With the ABS position optimized in the previous subsection, we next describe the direct satellite downlink, which constitutes one of the transmission options in the considered system and serves as the benchmark for evaluating whether UAV-assisted delivery can provide a rate improvement.
+ 
+For the direct satellite downlink, the link quality of each UE $l \ (1 \le l \le N)$ is characterized by an equivalent channel gain
 \begin{equation}
 \Gamma_{l}^{s}
-= \frac{G_{t}^{s} G_{r}^{s}}{L_{l}^{\mathrm{FS}} N_{s}} \, |h_{l}^{s}|^{2}.
+= \kappa_s \, \lvert h_{l}^{s} \rvert^{2},
 \end{equation}
+where $h_{l}^{s}$ denotes the small-scale fading coefficient of the land mobile satellite (LMS) channel, and $\kappa_s$ is a constant that accounts for large-scale propagation effects, including path loss, antenna gains, and noise normalization. The defined $\Gamma_{l}^{s}$ serves as a link-quality indicator for computing the achievable rate over the direct satellite path.
 
-The satellite aims to create $K$ pairs of MTs, where each pair will share the same sub-channel in the power and time domain, assigning different power allocation factors of the total satellite power $P_s$ to each MT belonging to a pair. Towards this end, a NOMA optimal user pairing policy is adopted, where the satellite sorts the MTs in ascending order by the channel gain $\Gamma_1^{s} \le \Gamma_2^{s} \le \cdots \le \Gamma_{2K}^{s}$ and matches the user $MT_k$ with the user $MT_{2K-k+1}$, for $1 \le k \le K$.Hence, each pair consists of the strong satellite channel user $MT_j^s$, and the weak satellite  channel user $MT_i^s$, with channel gains $\Gamma_j^{s} \ge \Gamma^{s}$,respectively.
-
-The optimal power allocation factor $\beta_j^s$ can be calculated by the following expression
+UEs are grouped into weak--strong pairs following standard NOMA principles. For each pair, superposition coding is applied at the satellite with total transmit power $P_s$, where a conventional NOMA power allocation strategy assigns a larger power fraction to the weak UE. Assuming perfect successive interference cancellation (SIC) at the strong UE, the achievable downlink rates over the direct satellite path can be expressed in a unified form as
 \begin{equation}
-\beta_{j}^{s}
-= \frac{\sqrt{1 + \Gamma_{i}^{s} P_{s}} - 1}{\Gamma_{i}^{s} P_{s}}.
-\label{power allocation}
+R^{s}
+= \frac{B_{s}}{K}
+\log_{2}\!\left( 1 + \frac{P_{s}\Gamma^{s}}{I^{s} + 1} \right),
 \end{equation}
+where $\Gamma^{s}$ denotes the corresponding satellite link-quality indicator, and $I^{s}$ represents the residual intra-pair interference determined by the adopted NOMA power allocation.
 
-According to the principle of NOMA, $MT_i^s$ will immediately decode its own signal by the received satellite signal, while $MT_j^s$ should first estimate the signal of the $MT_i^s$ and then perform successive interference cancellation (SIC) to retrieve its own signal.The achievable rates of $MT_j^s$ and $MT_i^s$ are
+The above satellite NOMA transmission serves as a standard transmission option in the considered system and does not involve any optimization over ABS placement, user pairing, or hybrid transmission decisions.
+
+\section{Joint Transmission Decision for System Throughput Maximization}
+\subsection{Transmission Options and Decision Variables}
+
+With the achievable rates of the direct satellite downlink characterized in the previous section, we now specify the transmission options available to the system and the corresponding decision variables. The objective is to flexibly exploit either direct satellite delivery or UAV-assisted transmission to maximize the overall system throughput.
+
+We consider a set of $N=2K$ terrestrial UEs grouped into $K$ NOMA pairs. For each UE pair, the system can select one transmission option from a predefined candidate set, which includes direct satellite transmission and ABS-assisted downlink modes. In particular, the following transmission options are available:
+\begin{itemize}
+    \item \textit{Direct satellite transmission}: both UEs in the pair are served directly by the satellite using the satellite NOMA scheme described in Section~2.2.
+    \item \textit{ABS-assisted transmission}: the downlink data are delivered to the UE pair via the aerial base station (ABS), where either NOMA or OMA transmission can be employed depending on the channel conditions.
+\end{itemize}
+
+Each transmission option is associated with a corresponding achievable rate determined by the underlying satellite-to-ground or air-to-ground links. Notably, ABS-assisted transmission is activated only when it yields a higher rate contribution than direct satellite delivery; otherwise, the system falls back to pure satellite transmission. This design enables the ABS to be utilized selectively, avoiding unnecessary relaying when the direct satellite link is already sufficient.
+
+Let $\mathcal{M}_k$ denote the set of feasible transmission options for the $k$-th UE pair. The transmission decision problem can then be interpreted as selecting one option from $\mathcal{M}_k$ for each UE pair, subject to system-level constraints and the overall throughput maximization objective. Importantly, the decision variables are defined at the UE-pair level, while the resulting system performance is evaluated in terms of the aggregate rate across all UEs.
+
+\subsection{System-Level Optimization Objective}
+
+Based on the transmission options defined in the previous subsection, the objective of the considered system is to maximize the aggregate downlink throughput across all UEs. Rather than optimizing individual links or UE pairs in isolation, a system-level objective is adopted to capture the coupled impact of transmission mode selection, resource sharing, and ABS utilization.
+
+Let $R_{u}$ denote the achievable downlink rate of UE $u$, which depends on the selected transmission option for its associated UE pair. The overall system throughput maximization problem is then formulated as
 \begin{equation}
-R_{j}^{s}
-= \frac{B_{s}}{K} \log_{2}\!\left( 1 + \beta_{j}^{s} P_{s} \Gamma_{j}^{s} \right),
-\label{achievable rates j}
+\max \quad \sum_{u=1}^{N} R_{u},
+\label{eq:system_sum_rate}
 \end{equation}
+where the summation is taken over all UEs served by the system. This objective naturally accounts for both direct satellite transmission and ABS-assisted delivery, as well as the interactions among UEs sharing the same transmission resources.
+
+It is important to emphasize that the ABS placement strategy described in Section~2.1 and the satellite NOMA transmission model in Section~2.2 are not optimized independently. Instead, they jointly contribute to the achievable rates $R_u$ and are evaluated through the unified system-level objective in~\eqref{eq:system_sum_rate}. As a result, the system selectively activates UAV-assisted transmission only when it provides a net throughput gain, while reverting to pure satellite transmission in scenarios where ABS assistance is unnecessary or ineffective.
+
+The adoption of a system-wide sum-rate objective enables coordinated transmission decisions across all UE pairs and forms the foundation for the joint decision formulation and iterative optimization framework presented in the following subsections.
+
+\subsection{Joint and Coordinated Decision Formulation}
+
+Based on the transmission options defined in Section~3.1 and the system-level objective in Section~3.2, the joint transmission decision problem is formulated to coordinate the selection of transmission modes across all UE pairs. Unlike pair-wise greedy selection, the proposed formulation explicitly accounts for system-wide interactions among UE pairs and enables coordinated utilization of satellite and ABS resources.
+
+Let $\mathcal{K}=\{1,\dots,K\}$ denote the set of UE pairs. For each pair $k\in\mathcal{K}$, we define a finite set of feasible transmission options $\mathcal{M}_k$. Each option $m\in\mathcal{M}_k$ corresponds to a specific combination of transmission links (direct satellite or ABS-assisted) and access schemes (NOMA or OMA), and yields a known achievable rate for the two UEs in pair $k$.
+
+We introduce a binary decision variable
 \begin{equation}
-R_{i}^{s}
-= \frac{B_{s}}{K} \log_{2}\!\left(
-1 + \frac{(1 - \beta_{j}^{s}) P_{s} \Gamma_{i}^{s}}{\beta_{j}^{s} P_{s} \Gamma_{i}^{s} + 1}
-\right).
-\label{achievable rates i}
+x_{k,m} =
+\begin{cases}
+1, & \text{if transmission option $m$ is selected for UE pair $k$}, \\
+0, & \text{otherwise}.
+\end{cases}
+\end{equation}
+To ensure that each UE pair adopts exactly one transmission option, the following constraint is imposed:
+\begin{equation}
+\sum_{m\in\mathcal{M}_k} x_{k,m} = 1, \quad \forall k \in \mathcal{K}.
+\label{eq:option_selection_constraint}
 \end{equation}
 
-\subsection{ABS hybrid NOMA/OMA transmission}
+Let $R_{k,m}$ denote the aggregate achievable downlink rate of UE pair $k$ when transmission option $m$ is selected. The joint transmission decision problem can then be formulated as the following integer linear programming (ILP) problem:
+\begin{equation}
+\begin{aligned}
+\max_{\{x_{k,m}\}} \quad & \sum_{k\in\mathcal{K}} \sum_{m\in\mathcal{M}_k} x_{k,m} \, R_{k,m} \\
+\text{s.t.} \quad 
+& \sum_{m\in\mathcal{M}_k} x_{k,m} = 1, \quad \forall k \in \mathcal{K}, \\
+& x_{k,m} \in \{0,1\}, \quad \forall k \in \mathcal{K}, \; m \in \mathcal{M}_k.
+\end{aligned}
+\label{eq:joint_decision_ilp}
+\end{equation}
 
+The formulation in~\eqref{eq:joint_decision_ilp} jointly optimizes the transmission decisions of all UE pairs under a unified system-level objective. Different physical transmission behaviors, including activating ABS-assisted transmission for both UEs, for only one UE, or for neither of them, naturally emerge as feasible solutions of the ILP without explicit case enumeration. This unified formulation avoids heuristic rule-based decision making and enables coordinated selection across UE pairs.
+
+In practice, the achievable rates $R_{k,m}$ depend on the ABS placement, channel realizations, and access schemes, and are updated as these system components evolve. While the ILP formulation provides a structured representation of the joint decision problem, its role in this work is to enable coordinated system-level decision making rather than to claim theoretical optimality. Efficient solution strategies and low-complexity alternatives can be employed depending on the system scale and implementation requirements.
+
+\subsection{Iterative Joint Optimization Framework}
+
+The joint transmission decision problem formulated in the previous subsection is embedded into an iterative system-level optimization framework, which coordinates ABS placement, achievable rate evaluation, and transmission mode selection. The key idea is to progressively refine system decisions based on the resulting throughput performance, rather than relying on a one-shot optimization.
+
+Specifically, the framework operates in an iterative manner. Given an initial ABS position, the achievable rates of both direct satellite transmission and ABS-assisted transmission are evaluated for all UE pairs. Based on these rates, the joint transmission decision problem in~\eqref{eq:joint_decision_ilp} is solved to determine the preferred transmission option for each UE pair. The resulting system throughput serves as a performance indicator that implicitly reflects the effectiveness of the current ABS deployment and transmission configuration.
+
+The feedback from the transmission decision to the ABS placement is intentionally designed to be indirect and lightweight. Instead of exchanging detailed per-link information, only the aggregate system throughput is used to guide the subsequent update of the ABS position. This design significantly reduces signaling overhead and computational complexity, while preserving the ability to adapt the ABS deployment to changing network conditions.
+
+An important feature of the proposed framework is its ability to intelligently activate or deactivate ABS-assisted transmission. When ABS assistance provides a throughput improvement, the framework selectively assigns one or both UEs in a pair to ABS-assisted transmission using either NOMA or OMA. Conversely, when direct satellite transmission already achieves satisfactory performance, the system automatically falls back to satellite-only delivery, thereby avoiding unnecessary ABS utilization and conserving aerial and spectral resources.
+
+The iterative process continues until convergence or a predefined stopping criterion is met. Although theoretical convergence guarantees are not explicitly claimed, extensive simulations demonstrate that the proposed framework converges rapidly and yields stable performance gains. Overall, this iterative joint optimization framework enables coordinated system-level decision making and provides a practical and flexible solution for integrating UAV-assisted transmission into satellite networks.
+
+\subsection{baseline}
 As described previously, ABS is integrated into the satellite network to improve the QoS of terrestrial users. Towards this end, the ABS should first receive and decode the NOMA superimposed signals of each pair of MTs via the S2A channel. The S2A channel gain can be expressed as
 \begin{equation}
 \Lambda_{sd}
