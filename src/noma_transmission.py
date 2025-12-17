@@ -58,10 +58,15 @@ class SatelliteNOMA:
 
         论文公式(3)：Γ_l = (Gs_t * Gs_r) / (L_FS_l * Ns) * |h_s_l|^2
 
-        **关键理解**：论文的SNR定义是"接收SNR"，而不是"发射SNR"！
-        - 在速率公式中：R = B * log2(1 + SNR * Γ)
-        - 这里的SNR是无量纲的接收信噪比
-        - Γ已经归一化，所以SNR*Γ就是实际的SINR
+        ⚠️ SNR 定义说明（避免 reviewer 对"功率 vs SNR"定义产生歧义）：
+        - Γ 已包含噪声归一化（分母含 Ns）
+        - 速率公式：R = B * log2(1 + SNR * Γ)
+        - SNR 为无量纲接收信噪比（非发射功率）
+        - SNR * Γ 即为实际 SINR
+
+        📝 建议论文中明确二选一表述：
+        1. "Γ includes noise normalization; SNR represents dimensionless received SNR"
+        2. "SNR represents equivalent transmit SNR; Γ is pure channel gain"
 
         参数:
             elevation_deg (float): 卫星仰角 (度)

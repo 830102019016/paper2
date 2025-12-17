@@ -195,8 +195,21 @@ class A2GChannel:
 class S2AChannel:
     """
     Satellite-to-Air (S2A) 信道模型
-    
+
     卫星到ABS的链路，使用自由空间路径损耗
+
+    ⚠️ 重要假设（与 SATCON 论文一致）：
+    - 原论文 Eq.(7) 中 S2A 链路未包含小尺度衰落项
+    - 本实现中 S2A 仅考虑大尺度路径损耗
+    - 小尺度衰落增益默认为 1.0
+
+    📝 建议论文说明：
+    "Following Eq. (7) in SATCON, small-scale fading on the S2A link
+    is ignored and only large-scale path loss is considered."
+
+    ✅ 代码验证：
+    - S2AChannel.compute_channel_gain() 中 fading_gain 参数在调用时设为 1.0
+    - 位置：a2g_channel.py:231-256
     """
     
     def __init__(self, frequency=None):
