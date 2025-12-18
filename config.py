@@ -27,12 +27,15 @@ class SimulationConfig:
     k_boltzmann = 1.38e-23          # 玻尔兹曼常数 (J/K)
     
     # ==================== 信道模型参数 ====================
-    # Loo模型参数（简化版 - Phase 1）
-    # 参考论文：城市环境，L-band，手持天线
-    # 注意：这些是估计值，论文引用了 [5] 但未给出具体数值
-    alpha_dB = -15                  # LoS分量平均衰减 (dB)
-    psi_dB = 3                      # LoS分量标准差 (dB)
-    MP_dB = -10                     # 多径分量功率 (dB)
+    # Loo模型参数 - 基于论文表2（第14页）
+    # 参考文献 [27]: Karavolos et al. 提取的LOO模型参数
+    # 环境：城市环境，L-band，手持天线
+    # 默认使用10°仰角的参数（与Figure 2实验设置一致）
+    elevation_angle = 10            # 默认仰角 (度)
+    alpha_dB = -0.7                 # M: LoS分量平均衰减 (dB) - 论文表2, E°=10°
+    psi_dB = 1.9                    # Σ: LoS分量标准差 (dB) - 论文表2, E°=10°
+    MP_dB = -38.3                   # MP: 多径分量功率 (dB) - 论文表2, E°=10°
+    D_km = 18.4                     # D: LEO卫星与用户平均距离 (km) - 论文表2, E°=10°
     f_doppler_max = 40e3            # 最大多普勒频移 (Hz) - 论文给出
     
     # ==================== 仿真控制 ====================
@@ -135,15 +138,24 @@ class SimulationConfig:
         return Nd
     
     @classmethod
-    def get_s2a_noise_power(cls):
+    def get_s2a_noise_power(cls, bandwidth=None):
         """
-        计算S2A链路（卫星到ABS）噪声功率 Nsd = k * Tsd * Bs
-        
+        计算S2A链路（卫星到ABS）噪声功率
+
+        【关键修正】（2024-12）：
+        - 原实现使用Bs（卫星带宽5MHz）计算噪声
+        - 修正：ABS实际使用Bd带宽接收，噪声应基于Bd
+        - 公式：Nsd = k * Tsd * Bd（而非Bs）
+
+        参数:
+            bandwidth: ABS带宽 (Hz)，如果为None则使用Bs（向后兼容）
+
         返回:
             Nsd: 噪声功率 (W)
         """
         T_kelvin = 10 ** (cls.Tsd_dBK / 10)
-        Nsd = cls.k_boltzmann * T_kelvin * cls.Bs
+        bw = bandwidth if bandwidth is not None else cls.Bs
+        Nsd = cls.k_boltzmann * T_kelvin * bw
         return Nsd
     
     @classmethod
@@ -173,9 +185,11 @@ class SimulationConfig:
         print(f"  高度范围: {cls.abs_height_min}-{cls.abs_height_max} m")
         
         print(f"\n【信道模型】")
-        print(f"  Loo模型 - α: {cls.alpha_dB} dB")
-        print(f"  Loo模型 - ψ: {cls.psi_dB} dB")
-        print(f"  Loo模型 - MP: {cls.MP_dB} dB")
+        print(f"  Loo模型 (基于论文表2, E°={cls.elevation_angle}°):")
+        print(f"    M (LoS均值): {cls.alpha_dB} dB")
+        print(f"    Σ (LoS标准差): {cls.psi_dB} dB")
+        print(f"    MP (多径功率): {cls.MP_dB} dB")
+        print(f"    D (卫星距离): {cls.D_km} km")
         print(f"  最大多普勒: {cls.f_doppler_max/1e3:.0f} kHz")
         print(f"  A2G环境: {cls.a2g_environment}")
         print(f"  A2G LoS损耗: {cls.a2g_eta_los} dB")

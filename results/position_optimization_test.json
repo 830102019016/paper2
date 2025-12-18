@@ -1,0 +1,30 @@
+{
+  "config": {
+    "snr_db": 20,
+    "elevation_deg": 10,
+    "abs_bandwidth_MHz": 1.2,
+    "n_realizations": 10,
+    "mode_selector": "greedy",
+    "s2a_allocator": "kkt"
+  },
+  "results": {
+    "Baseline (k-means)": {
+      "mean_sum_rate_Mbps": 30.4585376035075,
+      "std_sum_rate_Mbps": 0.4926248691385443,
+      "mean_se_bps_Hz": 6.0917075207015,
+      "mean_time_s": 0.28638694286346433
+    },
+    "L-BFGS-B (pure)": {
+      "mean_sum_rate_Mbps": 30.65699967255046,
+      "std_sum_rate_Mbps": 0.6146005652368585,
+      "mean_se_bps_Hz": 6.131399934510092,
+      "mean_time_s": 0.167946720123291
+    }
+  },
+  "comparison": {
+    "improvement_abs_Mbps": 0.19846206904295832,
+    "improvement_pct": 0.6515810825405532,
+    "time_ratio": 0.5864328814856619
+  },
+  "timestamp": "2025-12-19 00:13:10"
+}

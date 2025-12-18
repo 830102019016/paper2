@@ -111,6 +111,7 @@ class SatelliteNOMA:
         返回:
             rates (ndarray): shape (2K,) 每个用户的速率 (bps)
             sum_rate (float): 总速率 (bps)
+            power_factors (dict): 功率分配因子 {'beta_strong': [K], 'beta_weak': [K], 'pairs': [(i,j), ...]}
         """
         K = len(channel_gains) // 2
         bandwidth_per_pair = self.config.Bs / K  # 每对用户分配的带宽
@@ -120,6 +121,8 @@ class SatelliteNOMA:
 
         # 2. 计算每对的速率
         rates = np.zeros(len(channel_gains))
+        beta_strong_list = []
+        beta_weak_list = []
 
         for k in range(K):
             weak_idx, strong_idx = pairs[k]
@@ -130,6 +133,10 @@ class SatelliteNOMA:
             beta_strong, beta_weak = self.allocator.compute_power_factors(
                 gamma_strong, gamma_weak, snr_linear, verbose=False
             )
+
+            # 保存功率分配因子
+            beta_strong_list.append(beta_strong)
+            beta_weak_list.append(beta_weak)
 
             # 2.2 强用户速率 - 论文公式(5)
             # R_j = B/K * log2(1 + β_j * SNR * Γ_j)
@@ -151,7 +158,14 @@ class SatelliteNOMA:
         # 3. 计算总速率
         sum_rate = np.sum(rates)
 
-        return rates, sum_rate
+        # 4. 返回功率分配因子
+        power_factors = {
+            'beta_strong': np.array(beta_strong_list),
+            'beta_weak': np.array(beta_weak_list),
+            'pairs': pairs
+        }
+
+        return rates, sum_rate, power_factors
     
     def simulate_performance(self, snr_db_range, elevation_deg=10, 
                             n_realizations=100, verbose=True):
@@ -201,8 +215,8 @@ class SatelliteNOMA:
                 # 生成信道增益
                 channel_gains = self.compute_channel_gains_with_pathloss(elevation_deg)
 
-                # 计算速率（使用SNR线性值）
-                _, sum_rate = self.compute_achievable_rates(channel_gains, snr_linear)
+                # 计算速率（使用SNR线性值，忽略power_factors）
+                _, sum_rate, _ = self.compute_achievable_rates(channel_gains, snr_linear)
                 sum_rates_all[i, r] = sum_rate
             
             # 更新进度条信息

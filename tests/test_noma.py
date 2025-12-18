@@ -37,37 +37,37 @@ class TestSatelliteNOMA:
         """测试速率为正"""
         gains = sat_noma.compute_channel_gains_with_pathloss(elevation_deg=10)
         Ps = config.snr_to_power(20)
-        rates, sum_rate = sat_noma.compute_achievable_rates(gains, Ps)
-        
+        rates, sum_rate, _ = sat_noma.compute_achievable_rates(gains, Ps)
+
         assert np.all(rates >= 0), "速率必须非负"
         assert sum_rate >= 0, "总速率必须非负"
-    
+
     def test_sum_rate_equals_sum_of_rates(self, sat_noma):
         """测试总速率等于各用户速率之和"""
         gains = sat_noma.compute_channel_gains_with_pathloss(elevation_deg=10)
         Ps = config.snr_to_power(20)
-        rates, sum_rate = sat_noma.compute_achievable_rates(gains, Ps)
-        
+        rates, sum_rate, _ = sat_noma.compute_achievable_rates(gains, Ps)
+
         calculated_sum = np.sum(rates)
         assert abs(sum_rate - calculated_sum) < 1e-6, "总速率应等于用户速率之和"
-    
+
     def test_rate_increases_with_snr(self, sat_noma):
         """测试速率随SNR增加"""
         gains = sat_noma.compute_channel_gains_with_pathloss(elevation_deg=10)
-        
+
         Ps1 = config.snr_to_power(10)
         Ps2 = config.snr_to_power(20)
-        
-        _, sum_rate1 = sat_noma.compute_achievable_rates(gains, Ps1)
-        _, sum_rate2 = sat_noma.compute_achievable_rates(gains, Ps2)
-        
+
+        _, sum_rate1, _ = sat_noma.compute_achievable_rates(gains, Ps1)
+        _, sum_rate2, _ = sat_noma.compute_achievable_rates(gains, Ps2)
+
         assert sum_rate2 > sum_rate1, "高SNR应产生更高速率"
-    
+
     def test_spectral_efficiency_range(self, sat_noma):
         """测试频谱效率在合理范围"""
         gains = sat_noma.compute_channel_gains_with_pathloss(elevation_deg=10)
         Ps = config.snr_to_power(20)
-        _, sum_rate = sat_noma.compute_achievable_rates(gains, Ps)
+        _, sum_rate, _ = sat_noma.compute_achievable_rates(gains, Ps)
         
         se = sum_rate / config.Bs
         # 频谱效率应在合理范围（0-20 bits/s/Hz）
