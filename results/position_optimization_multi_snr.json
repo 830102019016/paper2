@@ -68,7 +68,7 @@
         0.5498431417254336,
         0.5398172593261229
       ],
-      "elapsed_time_min": 0.21285237868626913
+      "elapsed_time_min": 0.2121445377667745
     },
     "One-stage (greedy+kkt+k-means)": {
       "config": {
@@ -115,13 +115,13 @@
         0.5430138601417389,
         0.7930590098597735
       ],
-      "elapsed_time_min": 0.19176342089970908
+      "elapsed_time_min": 0.18681587378184
     },
-    "Two-stage (greedy+kkt+hybrid)": {
+    "Two-stage (greedy+kkt+L-BFGS-B)": {
       "config": {
         "mode_selector": "greedy",
         "s2a_allocator": "kkt",
-        "position_optimizer": "hybrid",
+        "position_optimizer": "L-BFGS-B",
         "color": "#e74c3c",
         "marker": "^",
         "linestyle": "-"
@@ -162,7 +162,7 @@
         0.9010591553865843,
         0.8911091682559417
       ],
-      "elapsed_time_min": 2.608111524581909
+      "elapsed_time_min": 2.6817183613777162
     }
   },
   "comparison": {
@@ -226,5 +226,5 @@
       "two_stage_vs_one_stage": 0.4174234364610584
     }
   },
-  "timestamp": "2025-12-19 00:23:26"
+  "timestamp": "2025-12-19 11:38:13"
 }

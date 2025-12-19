@@ -202,14 +202,17 @@ class ContinuousPositionOptimizer:
                 abs_position, elevation_deg, Nsd
             )
 
+            # 2.5 【Toy Network】ABS侧配对（按Γ^d重新排序）
+            abs_pairs, _ = self.allocator.optimal_user_pairing(channel_gains_a2g)
+
             # 3. 计算A2G速率（不含S2A约束）
             K = len(sat_pairs)
             bandwidth_per_pair = Bd / K
 
-            # NOMA A2G速率
+            # NOMA A2G速率（基于abs_pairs和β^d）
             a2g_rates_noma = np.zeros(2*K)
             for k in range(K):
-                weak_idx, strong_idx = sat_pairs[k]
+                weak_idx, strong_idx = abs_pairs[k]  # 【修正】使用ABS配对
                 gamma_weak = channel_gains_a2g[weak_idx]
                 gamma_strong = channel_gains_a2g[strong_idx]
 
@@ -234,18 +237,18 @@ class ContinuousPositionOptimizer:
                 1 + Pd * channel_gains_a2g
             )
 
-            # 4. 使用S2A分配器（临时模式选择）
+            # 4. 使用S2A分配器（临时模式选择，基于abs_pairs）
             _, modes_temp = mode_selector.select_modes(
-                sat_rates, a2g_rates_noma, a2g_rates_oma, sat_pairs
+                sat_rates, a2g_rates_noma, a2g_rates_oma, abs_pairs
             )
 
-            # 5. 分配S2A带宽
+            # 5. 分配S2A带宽（S2A基于sat_pairs解码）
             b_allocated = s2a_allocator.allocate_bandwidth(
                 sat_pairs, modes_temp, a2g_rates_noma, a2g_rates_oma,
                 snr_linear, h_s2a, sat_power_factors
             )
 
-            # 6. 计算S2A速率
+            # 6. 计算S2A速率（使用sat_pairs和β^s）
             s2a_rates = s2a_allocator.compute_s2a_rates(
                 sat_pairs, b_allocated, snr_linear, h_s2a, sat_power_factors
             )
@@ -254,9 +257,9 @@ class ContinuousPositionOptimizer:
             abs_noma_rates = np.minimum(a2g_rates_noma, s2a_rates)
             abs_oma_rates = np.minimum(a2g_rates_oma, s2a_rates)
 
-            # 8. 最终模式选择
+            # 8. 【Toy Network】最终模式选择（基于abs_pairs）
             final_rates, _ = mode_selector.select_modes(
-                sat_rates, abs_noma_rates, abs_oma_rates, sat_pairs
+                sat_rates, abs_noma_rates, abs_oma_rates, abs_pairs
             )
 
             # 9. 计算总速率

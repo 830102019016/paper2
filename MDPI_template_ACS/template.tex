@@ -180,10 +180,14 @@ All-in-all, and to the best of our knowledge, no studies can be found related to
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Materials and Methods}
 
+\subsection{UAV-Assisted Downlink Transmission}
 As shown in Figure~\ref{fig:system_model}, the considered SAGIN consists of $\mathbf{U}$ UAVs denoted by $\mathcal{U} = {1, 2, \dots, U}$ and $\mathbf{S}$ LEO satellites indicated by $\mathcal{S} = {1, 2, \dots, S}$. In addition, $\mathbf{K}$ IoT devices randomly scattered on the ground are represented as $\mathcal{K} = {1, 2, \dots, K}$.
 
-In the downlink, UEs may receive data either directly from the LEO satellite or through a UAV-assisted relaying link over the air-to-ground (A2G) channel. Satellite-side user pairing is first established based on direct downlink transmission, which serves as the reference for subsequent transmission decisions.Under this pairing, UAV-assisted transmission is activated only when it can provide a strict rate improvement over direct satellite delivery. Specifically, if both paired users achieve higher downlink rates via the UAV, UAV-assisted NOMA transmission is employed. If only one user benefits from UAV relaying, UAV-assisted OMA transmission is selectively applied to that user in order to avoid any performance degradation of the other. Otherwise, when UAV-assisted transmission cannot outperform direct satellite transmission for either user, both users are served directly by the satellite.
+In the considered downlink architecture, Internet-of-Things (IoT) devices may either receive data directly from a low Earth orbit (LEO) satellite or be served via an unmanned aerial vehicle (UAV) acting as a decode-and-forward relay. In the latter case, the UAV receives and decodes the satellite downlink signals over the satellite-to-air (S2A) link and forwards the decoded information to ground devices through the air-to-ground (A2G) link.
 
+Within this framework, the satellite performs non-orthogonal multiple access (NOMA) user pairing based on the satellite–user channel conditions and transmits power-domain superimposed downlink signals to each paired user group. Since the unmanned aerial vehicle (UAV) is located within the satellite coverage area, it can also receive and decode the same superimposed signals via the satellite-to-air (S2A) link. In this context, whether the UAV can effectively enhance the downlink performance depends on the transmission capability of its forwarding link. Therefore, the potential benefit of UAV-assisted transmission is determined by the quality of the air-to-ground (A2G) links between the UAV and the ground users.
+
+Accordingly, the UAV evaluates whether auxiliary relaying should be activated and selects the appropriate transmission mode, i.e., NOMA or orthogonal multiple access (OMA), based on the A2G channel conditions. UAV-assisted transmission is enabled only when the achievable downlink rate via the UAV exceeds that of the direct satellite link. Specifically, if a considered user pair can achieve higher downlink rates under the UAV-side NOMA pairing policy, the UAV adopts NOMA transmission to serve this pair. Otherwise, if only a single user benefits from UAV relaying, the UAV selectively serves this user using OMA transmission, while the remaining users continue to be served directly by the satellite.
 
 % Figure 1
 \begin{figure}[!htbp]
@@ -192,7 +196,9 @@ In the downlink, UEs may receive data either directly from the LEO satellite or 
 \caption{Illustration of the uplink communication procedure in SAGIN, where UAVs act as aerial aggregators to collect data from spatially distributed IoT devices and subsequently offload the aggregated data to LEO satellites.}
 \label{fig:system_model}
 \end{figure}
+\subsection{Normalized Channel Quality Indicator}
 
+\subsection{Constraints and Bottlenecks}
 To characterize the downlink transmission options described above, the satellite downlink is modeled using a land mobile satellite(LMS)  channel. The overall channel coefficient between LEO satellite $s$ and UE $i$ is expressed as
 \begin{equation}
 h_i^s = \sqrt{L_i^s} \cdot g_i^s,

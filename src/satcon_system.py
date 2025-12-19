@@ -7,17 +7,19 @@ SATCON完整系统 - 卫星+ABS协作NOMA
 3. ABS NOMA/OMA传输
 4. 混合决策规则（4种情况）
 
-✅ 【已完成的关键修正】（2024-12）：
-1. 配对机制：只使用卫星配对（sat_pairs），ABS不重新配对
-2. OMA带宽：整个 Bd/K 给单个用户（不是 Bd/2K）
-3. S2A约束：考虑 Decode-and-Forward 瓶颈（R = min(R_a2g, R_s2a)）
-4. 决策对照：端到端速率比较（卫星直达 vs ABS转发）
+✅ 【已完成的关键修正】（2024-12-19 - Toy Network逻辑）：
+1. 配对机制：卫星按Γ^s配对(sat_pairs)，ABS按Γ^d重新配对(abs_pairs)
+2. 功率分配：卫星用β^s，ABS重新计算β^d
+3. S2A解码：基于卫星配对sat_pairs和功率β^s（ABS接收卫星实际发送的信号）
+4. A2G传输：基于ABS配对abs_pairs和功率β^d（ABS重新编码并发送）
+5. 决策对照：端到端速率比较（卫星直达 vs ABS转发，含S2A瓶颈）
 
 论文参考：
 - Section III: SATCON
 - Section III.C: ABS hybrid NOMA/OMA transmission
 
 相关文档：
+- docs/satcon_toy_logic_and_gamma.md - Toy Network正确逻辑（两套配对）
 - docs/Baseline修正计划_v2_正确版.md - 详细修正说明
 - docs/satcon_决策逻辑总结.md - SATCON决策逻辑
 - docs/baseline_assumptions.md - 模块假设与合规性
@@ -42,11 +44,13 @@ class SATCONSystem:
     """
     SATCON完整系统：卫星-空中-地面混合NOMA方案
 
-    【关键修正】本实现已按照SATCON原论文正确逻辑修正：
-    - 唯一配对：只有卫星NOMA配对（sat_pairs），ABS基于此配对做决策
-    - OMA带宽：Bd/K（整个pair带宽）给单个用户
-    - S2A约束：ABS转发速率受 S2A 解码速率限制（DF瓶颈）
-    - 混合决策：端到端速率比较（R_s vs R_dn/R_do）
+    【关键修正 - Toy Network逻辑】(2024-12-19):
+    - 两套配对：
+      * 卫星侧：按Γ^s排序配对 → sat_pairs，计算β^s
+      * ABS侧：按Γ^d重新排序配对 → abs_pairs，计算β^d
+    - S2A解码：ABS接收卫星实际发送的信号（基于sat_pairs和β^s）
+    - A2G传输：ABS重新编码并发送（基于abs_pairs和β^d）
+    - 混合决策：端到端速率比较（考虑S2A瓶颈）
 
     依赖模块（已同步修正）：
     - user_distribution.py: 用户分布（均匀圆形）
@@ -136,32 +140,33 @@ class SATCONSystem:
         else:
             self.position_optimizer = None
     
-    def compute_abs_noma_rates(self, sat_pairs, channel_gains_a2g,
+    def compute_abs_noma_rates(self, abs_pairs, channel_gains_a2g,
                                s2a_rates, total_power):
         """
         计算ABS NOMA传输的可达速率（Decode-and-Forward）
 
-        【关键修正】：
-        1. 使用卫星配对（sat_pairs），不重新配对
-        2. 考虑S2A解码约束（DF瓶颈）
+        【Toy Network逻辑】：
+        1. 使用ABS侧配对（abs_pairs，基于Γ^d排序）
+        2. 使用ABS侧功率分配（β^d，基于A2G信道增益重新计算）
+        3. 考虑S2A解码约束（DF瓶颈）
 
         参数:
-            sat_pairs: 卫星配对 [(i,j), ...]
+            abs_pairs: ABS配对 [(i,j), ...]（按Γ^d排序形成）
             channel_gains_a2g: A2G信道增益 [N]
-            s2a_rates: S2A链路速率 [N]（卫星→ABS解码速率）
+            s2a_rates: S2A链路速率 [N]（卫星→ABS解码速率，基于sat_pairs）
             total_power: ABS功率 Pd
 
         返回:
             rates_noma: NOMA转发速率 [N]（已考虑S2A约束）
         """
-        K = len(sat_pairs)
+        K = len(abs_pairs)
         bandwidth_per_pair = self.Bd / K  # 每对一个时隙
 
         rates_noma = np.zeros(2*K)
 
         for k in range(K):
-            # 【修正点1】使用卫星配对
-            weak_idx, strong_idx = sat_pairs[k]
+            # 【Toy Network】使用ABS侧配对（基于Γ^d排序）
+            weak_idx, strong_idx = abs_pairs[k]
             gamma_weak = channel_gains_a2g[weak_idx]
             gamma_strong = channel_gains_a2g[strong_idx]
 
@@ -170,7 +175,7 @@ class SATCONSystem:
                 weak_idx, strong_idx = strong_idx, weak_idx
                 gamma_weak, gamma_strong = gamma_strong, gamma_weak
 
-            # ABS重新编码NOMA（用A2G信道的功率分配）
+            # ABS重新计算功率分配β^d（用A2G信道增益）
             beta_strong, beta_weak = self.allocator.compute_power_factors(
                 gamma_strong, gamma_weak, total_power
             )
@@ -184,37 +189,37 @@ class SATCONSystem:
                 (beta_strong * total_power * gamma_weak + 1)
             )
 
-            # 【修正点2】考虑S2A瓶颈（DF约束）
-            # ABS必须先从卫星解码，再转发
+            # 【Toy Network】考虑S2A瓶颈（DF约束）
+            # ABS必须先从卫星解码（基于sat_pairs），再用abs_pairs重编码转发
             rate_s2a_weak = s2a_rates[weak_idx]
             rate_s2a_strong = s2a_rates[strong_idx]
 
-            # 取瓶颈（min）
+            # 取瓶颈（min）- S2A基于卫星配对解码，A2G基于ABS配对发送
             rates_noma[weak_idx] = min(rate_a2g_weak, rate_s2a_weak)
             rates_noma[strong_idx] = min(rate_a2g_strong, rate_s2a_strong)
 
         return rates_noma
     
-    def compute_abs_oma_rates(self, sat_pairs, channel_gains_a2g,
+    def compute_abs_oma_rates(self, abs_pairs, channel_gains_a2g,
                               s2a_rates, total_power):
         """
         计算ABS OMA传输的可达速率
 
-        【关键修正】：
-        1. 使用sat_pairs（知道配对关系）
-        2. 整个pair带宽给单个用户（不是Bd/2K）
+        【Toy Network逻辑】：
+        1. 使用abs_pairs（ABS侧配对，决策时需要知道配对关系）
+        2. 整个pair带宽给单个用户（Bd/K，不是Bd/2K）
         3. 考虑S2A约束
 
         参数:
-            sat_pairs: 卫星配对
+            abs_pairs: ABS配对（按Γ^d排序形成，用于决策逻辑）
             channel_gains_a2g: A2G信道增益 [N]
-            s2a_rates: S2A链路速率 [N]
+            s2a_rates: S2A链路速率 [N]（基于sat_pairs解码得到）
             total_power: ABS功率 Pd
 
         返回:
             rates_oma: OMA转发速率 [N]（已考虑S2A约束）
         """
-        K = len(sat_pairs)
+        K = len(abs_pairs)
 
         # 【关键修正1】每对占用 Bd/K 带宽
         # OMA时，整个 Bd/K 都给一个用户
@@ -232,19 +237,20 @@ class SATCONSystem:
         return rates_oma
     
     def hybrid_decision(self, sat_rates, abs_noma_rates, abs_oma_rates,
-                       sat_pairs):
+                       abs_pairs):
         """
         混合NOMA/OMA决策规则（逐对，4条规则）
 
-        【修正点3】对照关系正确：
+        【Toy Network逻辑】：
+        - 决策基于ABS配对（abs_pairs，按Γ^d排序）
         - 对照：R_s（卫星直达，端到端）
         - 候选：R_dn, R_do（ABS转发，已含S2A约束，端到端）
 
         参数:
             sat_rates: 卫星直达速率 [N]
-            abs_noma_rates: ABS NOMA速率 [N]（已含S2A约束）
+            abs_noma_rates: ABS NOMA速率 [N]（基于abs_pairs和β^d，已含S2A约束）
             abs_oma_rates: ABS OMA速率 [N]（已含S2A约束）
-            sat_pairs: 配对 [(i,j), ...]
+            abs_pairs: ABS侧配对 [(i,j), ...]（按Γ^d排序）
 
         返回:
             final_rates: 最终速率 [N]
@@ -253,7 +259,7 @@ class SATCONSystem:
         final_rates = sat_rates.copy()
         modes = []
 
-        for k, (weak_idx, strong_idx) in enumerate(sat_pairs):
+        for k, (weak_idx, strong_idx) in enumerate(abs_pairs):
             R_s_i = sat_rates[weak_idx]
             R_s_j = sat_rates[strong_idx]
             R_dn_i = abs_noma_rates[weak_idx]
@@ -290,29 +296,30 @@ class SATCONSystem:
     def compute_s2a_rates(self, sat_pairs, abs_position, elevation_deg,
                          sat_channel_gains, snr_linear, sat_power_factors):
         """
-        计算S2A链路速率（卫星→ABS）- 修正版
+        计算S2A链路速率（卫星→ABS）- Toy Network逻辑
 
-        【关键修正】（2024-12）：
+        【Toy Network逻辑】（2024-12-19）：
+        - ABS接收卫星实际发送的NOMA信号（基于sat_pairs和β^s）
         - S2A使用卫星带宽Bs（不是Bd）
-        - 计算公式：R_s2a = (Bs/K) * log2(1 + SNR * |h_s2a|^2)
+        - 计算公式：R_s2a = (Bs/K) * log2(1 + β^s * SNR * |h_s2a|^2)
         - 参考论文Eq.(7)：S2A只考虑路径损耗，无小尺度衰落
-        - 【最新修正】直接复用卫星侧的功率分配因子β
+        - 直接复用卫星侧的功率分配因子β^s（保证解码一致性）
 
         物理意义：
-        - ABS需要从卫星接收并解码NOMA信号
+        - ABS需要从卫星接收并解码NOMA信号（基于卫星发送的配对）
         - 每对占用 Bs/K 带宽（卫星下行带宽）
         - S2A信道增益计算：自由空间路径损耗（仰角相关）
 
         参数:
-            sat_pairs: 卫星配对
+            sat_pairs: 卫星配对（按Γ^s排序）
             abs_position: ABS位置 [x, y, h]
             elevation_deg: 卫星仰角
             sat_channel_gains: 卫星信道增益（各用户）- 未使用但保留接口
             snr_linear: 卫星SNR（线性）
-            sat_power_factors: 卫星侧功率分配因子 {'beta_strong': [K], 'beta_weak': [K]}
+            sat_power_factors: 卫星侧功率分配因子β^s {'beta_strong': [K], 'beta_weak': [K]}
 
         返回:
-            s2a_rates: S2A解码速率 [N]（基于Bs带宽）
+            s2a_rates: S2A解码速率 [N]（基于Bs带宽和sat_pairs）
         """
         K = len(sat_pairs)
         Bs_per_pair = self.config.Bs / K  # 关键：每对的卫星带宽（S2A使用Bs，不是Bd）
@@ -391,7 +398,7 @@ class SATCONSystem:
         # 2. 计算卫星信道增益（需要提前计算，用于位置优化）
         sat_channel_gains = self.sat_noma.compute_channel_gains_with_pathloss(elevation_deg)
 
-        # 3. 【唯一的配对】卫星NOMA配对
+        # 3. 【卫星侧配对】按Γ^s排序配对（用于S2A解码）
         sat_pairs, _ = self.allocator.optimal_user_pairing(sat_channel_gains)
         K = len(sat_pairs)
 
@@ -437,6 +444,9 @@ class SATCONSystem:
             for r, fading in zip(distances_2d, fading_a2g)
         ])
 
+        # 6.5 【ABS侧配对】按Γ^d(A2G信道增益)重新排序配对（用于A2G传输）
+        abs_pairs, _ = self.allocator.optimal_user_pairing(channel_gains_a2g)
+
         # 7. 计算 S2A 信道增益（用于资源分配优化）
         satellite_altitude = self.config.satellite_altitude
         elevation_rad = np.deg2rad(elevation_deg)
@@ -450,13 +460,13 @@ class SATCONSystem:
         )
 
         # 8. 计算 A2G 速率（不含 S2A 约束）
-        # 这些是 ABS → 用户的速率（假设 S2A 无瓶颈）
+        # 【Toy Network】使用ABS侧配对abs_pairs和功率分配β^d
         bandwidth_per_pair = self.Bd / K
 
-        # NOMA A2G 速率（不含 S2A 约束）
+        # NOMA A2G 速率（不含 S2A 约束）- 基于abs_pairs
         a2g_rates_noma = np.zeros(2*K)
         for k in range(K):
-            weak_idx, strong_idx = sat_pairs[k]
+            weak_idx, strong_idx = abs_pairs[k]  # 【修正】使用ABS配对
             gamma_weak = channel_gains_a2g[weak_idx]
             gamma_strong = channel_gains_a2g[strong_idx]
 
@@ -464,6 +474,7 @@ class SATCONSystem:
                 weak_idx, strong_idx = strong_idx, weak_idx
                 gamma_weak, gamma_strong = gamma_strong, gamma_weak
 
+            # 【修正】ABS侧功率分配β^d
             beta_strong, beta_weak = self.allocator.compute_power_factors(
                 gamma_strong, gamma_weak, self.config.Pd
             )
@@ -482,18 +493,18 @@ class SATCONSystem:
         )
 
         # 9. 【新增】使用 S2A 分配器优化带宽分配
-        # 先用启发式/贪心选择模式（临时决策）
+        # 先用启发式/贪心选择模式（临时决策，基于abs_pairs）
         _, modes_temp = self.mode_selector.select_modes(
-            sat_rates, a2g_rates_noma, a2g_rates_oma, sat_pairs
+            sat_rates, a2g_rates_noma, a2g_rates_oma, abs_pairs
         )
 
-        # 根据临时模式分配 S2A 带宽
+        # 根据临时模式分配 S2A 带宽（S2A基于sat_pairs解码）
         b_allocated = self.s2a_allocator.allocate_bandwidth(
             sat_pairs, modes_temp, a2g_rates_noma, a2g_rates_oma,
             snr_linear, h_s2a, sat_power_factors
         )
 
-        # 计算 S2A 速率（基于优化的带宽分配）
+        # 计算 S2A 速率（基于优化的带宽分配，使用sat_pairs和β^s）
         s2a_rates = self.s2a_allocator.compute_s2a_rates(
             sat_pairs, b_allocated, snr_linear, h_s2a, sat_power_factors
         )
@@ -502,9 +513,9 @@ class SATCONSystem:
         abs_noma_rates = np.minimum(a2g_rates_noma, s2a_rates)
         abs_oma_rates = np.minimum(a2g_rates_oma, s2a_rates)
 
-        # 11. 【新增】使用模式选择器做最终决策
+        # 11. 【Toy Network】使用模式选择器做最终决策（基于abs_pairs）
         final_rates, modes = self.mode_selector.select_modes(
-            sat_rates, abs_noma_rates, abs_oma_rates, sat_pairs
+            sat_rates, abs_noma_rates, abs_oma_rates, abs_pairs
         )
 
         # 12. 统计
