@@ -185,7 +185,8 @@ As shown in Figure~\ref{fig:system_model}, the considered SAGIN consists of $\ma
 
 In the considered downlink architecture, Internet-of-Things (IoT) devices may either receive data directly from a low Earth orbit (LEO) satellite or be served via an unmanned aerial vehicle (UAV) acting as a decode-and-forward relay. In the latter case, the UAV receives and decodes the satellite downlink signals over the satellite-to-air (S2A) link and forwards the decoded information to ground devices through the air-to-ground (A2G) link.
 
-Within this framework, the satellite performs non-orthogonal multiple access (NOMA) user pairing based on the satellite–user channel conditions and transmits power-domain superimposed downlink signals to each paired user group. Since the unmanned aerial vehicle (UAV) is located within the satellite coverage area, it can also receive and decode the same superimposed signals via the satellite-to-air (S2A) link. In this context, whether the UAV can effectively enhance the downlink performance depends on the transmission capability of its forwarding link. Therefore, the potential benefit of UAV-assisted transmission is determined by the quality of the air-to-ground (A2G) links between the UAV and the ground users.
+Power-domain NOMA multiplexes multiple users on the same time–frequency resource block via superposition coding with different power allocation coefficients.
+Within this framework, the satellite performs NOMA user pairing based on the satellite–user channel conditions and transmits power-domain superimposed downlink signals to each paired user group. Since the unmanned aerial vehicle (UAV) is located within the satellite coverage area, it can also receive and decode the same superimposed signals via the satellite-to-air (S2A) link. In this context, whether the UAV can effectively enhance the downlink performance depends on the transmission capability of its forwarding link. Therefore, the potential benefit of UAV-assisted transmission is determined by the quality of the air-to-ground (A2G) links between the UAV and the ground users.
 
 Accordingly, the UAV evaluates whether auxiliary relaying should be activated and selects the appropriate transmission mode, i.e., NOMA or orthogonal multiple access (OMA), based on the A2G channel conditions. UAV-assisted transmission is enabled only when the achievable downlink rate via the UAV exceeds that of the direct satellite link. Specifically, if a considered user pair can achieve higher downlink rates under the UAV-side NOMA pairing policy, the UAV adopts NOMA transmission to serve this pair. Otherwise, if only a single user benefits from UAV relaying, the UAV selectively serves this user using OMA transmission, while the remaining users continue to be served directly by the satellite.
 
@@ -196,57 +197,56 @@ Accordingly, the UAV evaluates whether auxiliary relaying should be activated an
 \caption{Illustration of the uplink communication procedure in SAGIN, where UAVs act as aerial aggregators to collect data from spatially distributed IoT devices and subsequently offload the aggregated data to LEO satellites.}
 \label{fig:system_model}
 \end{figure}
-\subsection{Normalized Channel Quality Indicator}
 
-\subsection{Constraints and Bottlenecks}
-To characterize the downlink transmission options described above, the satellite downlink is modeled using a land mobile satellite(LMS)  channel. The overall channel coefficient between LEO satellite $s$ and UE $i$ is expressed as
+\subsection{Downlink Transmission Channel Quality Indicator}
+The satellite performs downlink NOMA user pairing based on the channel quality of the satellite-to-ground (S2G) links. 
+In contrast, the ABS decides whether to participate in decode-and-forward relaying and determines the corresponding transmission mode (NOMA or OMA) mainly according to the air-to-ground (A2G) channel conditions.
+
+Specifically, the S2G and A2G links are characterized by the channel quality indicator $\Gamma$, which incorporates small-scale fading effects and is mainly used for user ordering and decision making. 
+
+For the satellite transmission, the land mobile satellite (LMS) channel between the satellite and ground IoT $k$ $(1 \leq k \leq 2K)$ is characterized by the complex channel coefficient $h_k^s$, which captures the small-scale fading effects. Accordingly, the corresponding normalized satellite downlink channel quality indicator (CQI) is defined as
 \begin{equation}
-h_i^s = \sqrt{L_i^s} \cdot g_i^s,
+\Gamma_k^s = \frac{G_t^s G_r^s}{L_k^{\mathrm{FS}} N_s} |h_k^s|^2 ,
+\label{normalized indicator}
 \end{equation}
-where $L_i^s$ represents the large-scale free-space path loss given by
+where $G_t^s$ and $G_r^s$ denote the satellite transmit and user receive antenna gains, respectively, $L_k^{\mathrm{FS}}$ represents the free-space path loss of the satellite-to-ground link for user $k$, $N_s$ is the noise power at the ground user receiver, and $|h_k^s|^2$ denotes the instantaneous power gain of the LMS channel.
+
+Based on the defined CQI, the satellite performs NOMA user ordering and pairing to enable power-domain multiplexing. Specifically, the IoTs are first sorted in ascending order according to their CQI values
 \begin{equation}
-L_i^s = \left(\frac{c}{4\pi f_c d_i^s}\right)^2,
+\Gamma_1^s \le \Gamma_2^s \le \cdots \le \Gamma_{2K}^s .
 \end{equation}
-with $f_c$ denoting the carrier frequency, $d_i^s$ the satellite-to-UE distance, and $c$ the speed of light.
 
-The small-scale fading coefficient $g_i^s$ follows the Loo model,characterizing the composite fading as a superposition of a dominant line-of-sight (LoS) component and multipath fading
+Following the optimal NOMA user pairing strategy in \cite{zhu2018optimal}, this pairing strategy exploits the CQI disparity among users to enhance spectral efficiency while maintaining fairness in NOMA transmission.
+The satellite pairs the $k$-th weakest user with the $(2K-k+1)$-th strongest user. 
+As a result, each NOMA pair consists of a weak satellite-channel user and a strong satellite-channel user, denoted by $\mathrm{IoT}_i^s$ and $\mathrm{IoT}_j^s$, respectively, satisfying $\Gamma_j^s \ge \Gamma_i^s$.
+We adopt the standard power-domain NOMA model with superposition coding at the transmitter and successive interference cancellation (SIC) at the receivers. 
+Since SIC is not the focus of this work, ideal SIC is assumed and the corresponding achievable rates  and power allocation coefficients follow the conventional NOMA expressions.
+
+For the ABS-assisted transmission, the air-to-ground (A2G) channel between the ABS and ground user $k$ $(1 \leq k \leq K)$ is characterized by the complex channel coefficient $h_k^d$, which captures the small-scale fading effects of the A2G link. 
+By incorporating the ABS and user antenna gains, the A2G path loss dependent on the ABS altitude $h$ and the horizontal distance $r_k$, as well as the receiver noise power, the corresponding normalized A2G CQI is defined as
 \begin{equation}
-g_i^s(t) = A_i(t)e^{j\phi_i(t)} + m_i(t),
+\Gamma_k^d = \frac{G_t^d G_r^d}{L_k^{\mathrm{A2G}}(h, r_k) N_d} |h_k^d|^2 .
 \end{equation}
-where $A_i(t)$ represents the LoS amplitude with $20\log_{10}A_i(t) \sim \mathcal{N}(\mu, \sigma^2)$, and $m_i(t) = m_{I,i}(t) + jm_{Q,i}(t)$ denotes the multipath component with $m_{I,i}, m_{Q,i} \sim \mathcal{N}(0, \sigma_m^2)$.The parameters are set as $\mu = -1$ dB, $\sigma = 2$ dB, corresponding to a suburban environment.
+where $G_t^d$ and $G_r^d$ denote the ABS transmit and user receive antenna gains, respectively, $L_k^{\mathrm{A2G}}(h, r_k)$ represents the A2G path loss as a function of the ABS altitude $h$ and the horizontal distance $r_k$, $N_d$ is the receiver noise power associated with the A2G link, and $|h_k^d|^2$ denotes the instantaneous power gain.
 
-Furthermore, the Doppler effect induced by satellite motion is captured using the classical Jakes spectrum with maximum Doppler shift $f_D = v f_c / c$, where $v$ denotes the relative velocity between the satellite and UE.
+The defined A2G CQI will be subsequently used by the ABS to evaluate the potential performance gain of relay-assisted transmission by characterizing the quality of the air-to-ground link. Specifically, a higher A2G CQI indicates more favorable access conditions between the ABS and the ground users, making relay-assisted transmission more likely to outperform direct satellite transmission and thus influencing the selection of the corresponding transmission mode.
 
-For UAV-assisted transmission, data are forwarded to UEs through an air-to-ground (A2G) link. The channel coefficient between the UAV and UE $i$ is denoted by $h_i^d$ and can be expressed as
+\subsection{Downlink Transmission Constraints and Bottlenecks}
+Before forwarding the satellite signals to the ground users, the ABS must successfully receive and decode the superimposed downlink signals over the satellite-to-air (S2A) backhaul link. As a result, the S2A link imposes a fundamental constraint on the achievable performance of ABS-assisted transmission and constitutes a key bottleneck in the downlink.
+
+To characterize this bottleneck, the quality of the S2A link is described by the following normalized backhaul channel parameter
 \begin{equation}
-h_i^d = \sqrt{L_i^{\text{A2G}}} \cdot g_i^d,
-\label{eq:channel coefficient}
+\Lambda_{sd} = \frac{G_t^s G_r^{sd}}{L_{sd}^{\mathrm{FS}} N_{sd}} ,
 \end{equation}
-where $L_i^{\text{A2G}}$ represents the large-scale path loss and $g_i^d$ denotes the small-scale fading.
+where $G_t^s$ and $G_r^{sd}$ denote the satellite transmit and ABS receive antenna gains, respectively, $L_{sd}^{\mathrm{FS}}$ represents the free-space path loss of the S2A link, and $N_{sd}$ is the receiver noise power at the ABS.
 
-Following the elevation-angle-dependent model by Al-Hourani \emph{et al.}~\cite{al2014modeling}, the path loss accounts for probabilistic LoS and NLoS propagation in urban environments. The LoS probability is given by
-\begin{equation}
-P_{\text{LoS}}(\theta_i) = \frac{1}{1 + a \exp(-b[\theta_i - a])},
-\end{equation}
-where $\theta_i = \arcsin(H/\sqrt{H^2 + d_i^2})$ is the elevation angle, $H$ is the UAV altitude, $d_i$ is the horizontal distance, and $(a, b)$ are environment-dependent parameters. For urban environments, we adopt $a = 9.61$ and $b = 0.16$~\cite{al2014modeling}.
+It is worth noting that, regardless of the quality of the air-to-ground (A2G) access links, the end-to-end downlink rate achievable via ABS-assisted transmission is upper-bounded by the decoding capability of the S2A backhaul link. Consequently, the S2A link acts as a bottleneck that limits the effectiveness of relay-assisted downlink transmission.
 
-The composite path loss is then computed as
-\begin{equation}
-L_i^{\text{A2G}} = P_{\text{LoS}}(\theta_i) \cdot L_i^{\text{LoS}} 
-+ [1-P_{\text{LoS}}(\theta_i)] \cdot L_i^{\text{NLoS}},
-\end{equation}
-where
-\begin{align}
-L_i^{\text{LoS}}\text{(dB)} &= 20\log_{10}\left(\frac{4\pi f_c d_i^{\text{3D}}}{c}\right) + \eta_{\text{LoS}}, \\
-L_i^{\text{NLoS}}\text{(dB)} &= 20\log_{10}\left(\frac{4\pi f_c d_i^{\text{3D}}}{c}\right) + \eta_{\text{NLoS}},
-\label{eq:path loss}
-\end{align}
-with $d_i^{\text{3D}} = \sqrt{H^2 + d_i^2}$ denoting the 3D distance, and $\eta_{\text{LoS}} = 1$ dB, $\eta_{\text{NLoS}} = 20$ dB representing the excessive path loss for LoS and NLoS links, respectively~\cite{al2014modeling}.
+The above modeling framework establishes the downlink transmission modes, channel quality indicators, and fundamental bottlenecks of the considered satellite–ABS–ground system, which together provide the basis for the subsequent algorithmic design and optimization.
 
-It should be emphasized that the downlink rate delivered to a UE via UAV-assisted relaying is jointly determined by the A2G access link and the satellite-to-UAV (S2A) backhaul. Since the UAV can only forward the data it receives from the satellite, the capacity of the S2A backhaul may limit the effective downlink rate, preventing UAV-assisted transmission from consistently outperforming direct satellite delivery.
+It is worth noting that, although the S2A backhaul link constitutes a fundamental bottleneck for ABS-assisted downlink transmission, it is not directly optimized as an independent design variable. Instead, the proposed three-step framework implicitly accounts for this constraint through the joint design of transmission mode selection, S2A resource allocation, and ABS deployment. Specifically, inefficient relay-assisted transmission modes are avoided during the mode selection stage, the decode-and-forward bottleneck is eliminated through appropriate S2A resource allocation, and the impact of the backhaul constraint is further alleviated via ABS position optimization, thereby effectively mitigating the influence of the S2A bottleneck on system performance.
 
-All downlink links are assumed to be impaired by additive white Gaussian noise (AWGN). These channel characteristics explain why UAV-assisted relaying may provide significant rate gains for some users while offering no advantage for others, thereby motivating rate-based downlink transmission mode selection.
-
+\section{Algorithm Design and Implementation}
 \subsection{ABS placement process}
 
 The ABS placement is performed prior to the hybrid transmission decision, since the A2G channel characteristics—and consequently the achievable UAV-assisted rates—are fundamentally determined by the ABS position. Without an appropriately optimized ABS location, the hybrid NOMA/OMA decision would be restricted to a limited set of feasible transmission options, leading to suboptimal system performance.
@@ -755,6 +755,11 @@ Author 1, A.B. Title of Thesis. Level of Thesis, Degree-Granting University, Loc
 % Reference 8
 \bibitem{al2014modeling}
 Al-Hourani, A.; Kandeepan, S.; Lardner, S.Optimal LAP Altitude for Maximum Coverage.{\em IEEE Wireless Commun. Lett.} {\bf 2014}, {\em 3}, 569--572.
+% Reference 9
+\bibitem{zhu2018optimal}
+Zhu, L.; Zhang, J.; Xiao, Z.; Cao, X.; Wu, D. O.
+Optimal user pairing for downlink non-orthogonal multiple access (NOMA).
+{\em IEEE Wireless Commun. Lett.} {\bf 2018}, {\em 8}, 328--331.
 
 \end{thebibliography}
 

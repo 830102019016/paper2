@@ -190,8 +190,7 @@ def plot_3d_user_distribution_with_abs(user_positions, abs_position,
     circle_x = coverage_radius * np.cos(theta)
     circle_y = coverage_radius * np.sin(theta)
     circle_z = np.zeros_like(circle_x)
-    ax.plot(circle_x, circle_y, circle_z, 'gray', linewidth=2, alpha=0.5,
-            label=f'Coverage (R={coverage_radius}m)')
+    ax.plot(circle_x, circle_y, circle_z, 'gray', linewidth=2, alpha=0.5)
 
     # 填充地面圆盘
     theta_fill = np.linspace(0, 2*np.pi, 50)
@@ -202,21 +201,18 @@ def plot_3d_user_distribution_with_abs(user_positions, abs_position,
     Z_fill = np.zeros_like(X_fill)
     ax.plot_surface(X_fill, Y_fill, Z_fill, alpha=0.1, color='lightgray')
 
-    # 2. 绘制用户位置（按最终传输模式区分颜色）
+    # 2. 绘制用户位置（按最终传输模式区分颜色 - 5种类型）
     if user_modes is not None:
-        # 根据最终传输模式分类用户
-        sat_noma_weak = [i for i, m in enumerate(user_modes) if m == 'sat' and i in [p[0] if channel_gains[p[0]] <= channel_gains[p[1]] else p[1] for p in sat_pairs if i in p]]
-        sat_noma_strong = [i for i, m in enumerate(user_modes) if m == 'sat' and i in [p[1] if channel_gains[p[0]] <= channel_gains[p[1]] else p[0] for p in sat_pairs if i in p]]
-        abs_users = [i for i, m in enumerate(user_modes) if m in ['abs_noma_weak', 'abs_noma_strong', 'abs_oma']]
-
-        # 简化版本：根据user_modes直接分类
-        sat_weak = []
-        sat_strong = []
-        abs_relay = []
+        # 根据user_modes直接分类为5种接收类型
+        sat_weak = []          # 卫星直达 - 弱用户
+        sat_strong = []        # 卫星直达 - 强用户
+        abs_noma_weak = []     # ABS NOMA中继 - 弱用户
+        abs_noma_strong = []   # ABS NOMA中继 - 强用户
+        abs_oma = []           # ABS OMA中继
 
         for i, mode in enumerate(user_modes):
             if mode == 'sat':
-                # 判断是强用户还是弱用户
+                # 判断是强用户还是弱用户（基于sat_pairs）
                 is_weak = False
                 for weak_idx, strong_idx in sat_pairs:
                     if i == weak_idx or i == strong_idx:
@@ -229,32 +225,52 @@ def plot_3d_user_distribution_with_abs(user_positions, abs_position,
                     sat_weak.append(i)
                 else:
                     sat_strong.append(i)
-            else:  # ABS中继用户（abs_noma_weak, abs_noma_strong, abs_oma）
-                abs_relay.append(i)
+            elif mode == 'abs_noma_weak':
+                abs_noma_weak.append(i)
+            elif mode == 'abs_noma_strong':
+                abs_noma_strong.append(i)
+            elif mode == 'abs_oma':
+                abs_oma.append(i)
 
-        # 绘制卫星NOMA弱用户（红色圆圈）
+        # 【类型1】卫星直达NOMA弱用户（蓝色圆圈）
         if sat_weak:
             ax.scatter(user_positions[sat_weak, 0], user_positions[sat_weak, 1],
                       user_positions[sat_weak, 2],
-                      c='red', marker='o', s=80, alpha=0.8,
-                      edgecolors='darkred', linewidths=1.5,
-                      label=f'Sat NOMA Weak ({len(sat_weak)})', zorder=3)
+                      c='blue', marker='o', s=100, alpha=0.8,
+                      edgecolors='darkblue', linewidths=1.5,
+                      label=f'Sat Direct Weak ({len(sat_weak)})', zorder=3)
 
-        # 绘制卫星NOMA强用户（绿色方块）
+        # 【类型2】卫星直达NOMA强用户（蓝色三角）
         if sat_strong:
             ax.scatter(user_positions[sat_strong, 0], user_positions[sat_strong, 1],
                       user_positions[sat_strong, 2],
-                      c='green', marker='s', s=80, alpha=0.8,
-                      edgecolors='darkgreen', linewidths=1.5,
-                      label=f'Sat NOMA Strong ({len(sat_strong)})', zorder=3)
-
-        # 绘制ABS中继用户（蓝色三角）
-        if abs_relay:
-            ax.scatter(user_positions[abs_relay, 0], user_positions[abs_relay, 1],
-                      user_positions[abs_relay, 2],
-                      c='blue', marker='^', s=80, alpha=0.8,
+                      c='blue', marker='^', s=100, alpha=0.8,
                       edgecolors='darkblue', linewidths=1.5,
-                      label=f'ABS Relay ({len(abs_relay)})', zorder=3)
+                      label=f'Sat Direct Strong ({len(sat_strong)})', zorder=3)
+
+        # 【类型3】ABS NOMA中继弱用户（红色圆圈）
+        if abs_noma_weak:
+            ax.scatter(user_positions[abs_noma_weak, 0], user_positions[abs_noma_weak, 1],
+                      user_positions[abs_noma_weak, 2],
+                      c='red', marker='o', s=100, alpha=0.8,
+                      edgecolors='darkred', linewidths=1.5,
+                      label=f'ABS NOMA Weak ({len(abs_noma_weak)})', zorder=3)
+
+        # 【类型4】ABS NOMA中继强用户（红色三角）
+        if abs_noma_strong:
+            ax.scatter(user_positions[abs_noma_strong, 0], user_positions[abs_noma_strong, 1],
+                      user_positions[abs_noma_strong, 2],
+                      c='red', marker='^', s=100, alpha=0.8,
+                      edgecolors='darkred', linewidths=1.5,
+                      label=f'ABS NOMA Strong ({len(abs_noma_strong)})', zorder=3)
+
+        # 【类型5】ABS OMA中继（绿色方块）
+        if abs_oma:
+            ax.scatter(user_positions[abs_oma, 0], user_positions[abs_oma, 1],
+                      user_positions[abs_oma, 2],
+                      c='green', marker='s', s=120, alpha=0.8,
+                      edgecolors='darkgreen', linewidths=1.5,
+                      label=f'ABS OMA ({len(abs_oma)})', zorder=3)
     else:
         # 没有模式信息，所有用户用灰色
         ax.scatter(user_positions[:, 0], user_positions[:, 1], user_positions[:, 2],
@@ -265,18 +281,18 @@ def plot_3d_user_distribution_with_abs(user_positions, abs_position,
     ax.scatter(abs_position[0], abs_position[1], abs_position[2],
               c='red', marker='^', s=500,
               edgecolors='black', linewidths=2.5,
-              label=f'ABS', zorder=5)
+              zorder=5)
 
     # 4. 绘制ABS到地面的投影线（虚线）
     ax.plot([abs_position[0], abs_position[0]],
            [abs_position[1], abs_position[1]],
            [0, abs_position[2]],
-           'r--', linewidth=2, alpha=0.6, label='ABS Height Projection')
+           'r--', linewidth=2, alpha=0.6)
 
     # 5. 绘制ABS在地面的投影点
     ax.scatter(abs_position[0], abs_position[1], 0,
               c='orange', marker='x', s=200, linewidths=3,
-              label='ABS Ground Projection', zorder=4)
+              zorder=4)
 
     # 6. 图表设置
     ax.set_xlabel('X (m)', fontsize=12, fontweight='bold', labelpad=10)
