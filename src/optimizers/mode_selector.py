@@ -22,7 +22,7 @@ class ModeSelector(ABC):
     """模式选择器抽象基类"""
 
     @abstractmethod
-    def select_modes(self, sat_rates, abs_noma_rates, abs_oma_rates, sat_pairs):
+    def select_modes(self, sat_rates, abs_noma_rates, abs_oma_rates, abs_pairs):
         """
         选择传输模式
 
@@ -30,7 +30,8 @@ class ModeSelector(ABC):
             sat_rates: 卫星直达速率 [N]
             abs_noma_rates: ABS NOMA速率 [N]（已含S2A约束）
             abs_oma_rates: ABS OMA速率 [N]（已含S2A约束）
-            sat_pairs: 卫星配对 [(weak_idx, strong_idx), ...]
+            abs_pairs: ABS配对 [(weak_idx, strong_idx), ...]
+                      注：基于A2G信道增益(Γ^d)配对，与SAT配对可能不同
 
         返回:
             final_rates: 最终速率 [N]
@@ -54,16 +55,19 @@ class HeuristicSelector(ModeSelector):
     - 无法保证局部或全局最优
     """
 
-    def select_modes(self, sat_rates, abs_noma_rates, abs_oma_rates, sat_pairs):
+    def select_modes(self, sat_rates, abs_noma_rates, abs_oma_rates, abs_pairs):
         """
         启发式规则决策
 
         实现逻辑：完全复制原 satcon_system.py 的 hybrid_decision 方法
+
+        注：虽然原方法基于SAT-pairs，但根据路线A，应基于ABS-pairs决策
+             因为NOMA/OMA转发是ABS行为，资源分配基于ABS配对
         """
         final_rates = sat_rates.copy()
         modes = []
 
-        for k, (weak_idx, strong_idx) in enumerate(sat_pairs):
+        for k, (weak_idx, strong_idx) in enumerate(abs_pairs):
             R_s_i = sat_rates[weak_idx]
             R_s_j = sat_rates[strong_idx]
             R_dn_i = abs_noma_rates[weak_idx]
@@ -115,7 +119,7 @@ class ExhaustiveSelector(ModeSelector):
     - 提供性能上界（用于对比其他算法）
     """
 
-    def select_modes(self, sat_rates, abs_noma_rates, abs_oma_rates, sat_pairs):
+    def select_modes(self, sat_rates, abs_noma_rates, abs_oma_rates, abs_pairs):
         """
         穷举搜索全局最优模式
 
@@ -123,8 +127,10 @@ class ExhaustiveSelector(ModeSelector):
         1. 使用 itertools.product 生成所有组合
         2. 对每种组合计算总速率
         3. 记录最优解
+
+        注：基于ABS-pairs搜索，因为NOMA/OMA是ABS的物理行为
         """
-        K = len(sat_pairs)
+        K = len(abs_pairs)
         N = len(sat_rates)
 
         # 所有可能的模式
@@ -146,7 +152,7 @@ class ExhaustiveSelector(ModeSelector):
 
             # 降级为贪心
             return GreedySelector().select_modes(
-                sat_rates, abs_noma_rates, abs_oma_rates, sat_pairs
+                sat_rates, abs_noma_rates, abs_oma_rates, abs_pairs
             )
 
         # 只在组合数较多时显示警告
@@ -158,7 +164,7 @@ class ExhaustiveSelector(ModeSelector):
             # 计算该组合下的速率
             rates = np.zeros(N)
 
-            for k, (weak_idx, strong_idx) in enumerate(sat_pairs):
+            for k, (weak_idx, strong_idx) in enumerate(abs_pairs):
                 mode = mode_combo[k]
 
                 if mode == 'sat':
@@ -215,18 +221,21 @@ class GreedySelector(ModeSelector):
     - 适合实时决策
     """
 
-    def select_modes(self, sat_rates, abs_noma_rates, abs_oma_rates, sat_pairs):
+    def select_modes(self, sat_rates, abs_noma_rates, abs_oma_rates, abs_pairs):
         """
         贪心选择：逐对选择最优模式
 
         实现细节：
-        1. 计算每个 pair 在 4 种模式下的总速率
+        1. 计算每个 ABS-pair 在 4 种模式下的总速率
         2. 选择总速率最大的模式
+
+        注：基于ABS-pairs进行贪心决策，每个pair独立选择最优模式
+             这是物理可实现的，因为ABS的NOMA/OMA资源分配基于ABS配对
         """
         final_rates = sat_rates.copy()
         modes = []
 
-        for k, (weak_idx, strong_idx) in enumerate(sat_pairs):
+        for k, (weak_idx, strong_idx) in enumerate(abs_pairs):
             # 计算各模式的收益（pair总速率）
             gains = {
                 'sat': sat_rates[weak_idx] + sat_rates[strong_idx],
@@ -259,11 +268,14 @@ class GreedySelector(ModeSelector):
 
 # ==================== 辅助函数 ====================
 
-def compare_selectors(sat_rates, abs_noma_rates, abs_oma_rates, sat_pairs):
+def compare_selectors(sat_rates, abs_noma_rates, abs_oma_rates, abs_pairs):
     """
     对比三种选择器的性能
 
     用于调试和验证
+
+    参数:
+        abs_pairs: ABS配对（基于A2G信道增益）
 
     返回:
         dict: 各选择器的结果
@@ -277,7 +289,7 @@ def compare_selectors(sat_rates, abs_noma_rates, abs_oma_rates, sat_pairs):
     results = {}
     for name, selector in selectors.items():
         final_rates, modes = selector.select_modes(
-            sat_rates, abs_noma_rates, abs_oma_rates, sat_pairs
+            sat_rates, abs_noma_rates, abs_oma_rates, abs_pairs
         )
         results[name] = {
             'sum_rate': np.sum(final_rates),
@@ -297,7 +309,7 @@ if __name__ == "__main__":
     print("=" * 60)
 
     # 构造测试数据（K=2 对，N=4 用户）
-    sat_pairs = [(0, 1), (2, 3)]
+    abs_pairs = [(0, 1), (2, 3)]  # ABS配对（基于A2G信道增益）
 
     # 假设速率（bits/s）
     sat_rates = np.array([1.0, 2.0, 1.5, 2.5])  # 卫星直达
@@ -305,13 +317,13 @@ if __name__ == "__main__":
     abs_oma_rates = np.array([1.8, 3.0, 2.0, 3.5])  # ABS OMA
 
     print(f"\n输入数据:")
-    print(f"  Pairs: {sat_pairs}")
+    print(f"  ABS Pairs: {abs_pairs}")
     print(f"  SAT rates: {sat_rates}")
     print(f"  NOMA rates: {abs_noma_rates}")
     print(f"  OMA rates: {abs_oma_rates}")
 
     # 对比三种选择器
-    results = compare_selectors(sat_rates, abs_noma_rates, abs_oma_rates, sat_pairs)
+    results = compare_selectors(sat_rates, abs_noma_rates, abs_oma_rates, abs_pairs)
 
     print(f"\n结果对比:")
     for name, result in results.items():

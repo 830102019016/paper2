@@ -247,6 +247,94 @@ The above modeling framework establishes the downlink transmission modes, channe
 It is worth noting that, although the S2A backhaul link constitutes a fundamental bottleneck for ABS-assisted downlink transmission, it is not directly optimized as an independent design variable. Instead, the proposed three-step framework implicitly accounts for this constraint through the joint design of transmission mode selection, S2A resource allocation, and ABS deployment. Specifically, inefficient relay-assisted transmission modes are avoided during the mode selection stage, the decode-and-forward bottleneck is eliminated through appropriate S2A resource allocation, and the impact of the backhaul constraint is further alleviated via ABS position optimization, thereby effectively mitigating the influence of the S2A bottleneck on system performance.
 
 \section{Algorithm Design and Implementation}
+
+\subsection{Transmission Mode Selection}
+Although each user may theoretically receive downlink signals from both the satellite and the ABS,the transmission mode is determined at the ABS prior to downlink forwarding.
+This is because simultaneous transmission of multiple NOMA signals would result in unmanageable inter-layer interference and excessive backhaul and power consumption. Therefore, the ABS determines in advance whether and how to forward the satellite signals, ensuring that only beneficial transmissions are activated.
+
+When ABS-OMA is selected for a user, the satellite continues its NOMA broadcast as the baseline transmission, while the ABS selectively forwards the decoded signal only to the intended user using OMA. The paired user is served exclusively by the satellite in that time slot.
+
+Although ABS-OMA may result in a lower sum rate for the corresponding user pair within the same transmission interval compared to ABS-NOMA, it guarantees that the user served by the ABS achieves a higher rate than direct satellite transmission, while avoiding unnecessary forwarding for the other user.
+
+In general, under a downlink transmission where the available bandwidth $B$ is shared by $K$ user pairs, the achievable rate of user $k$ can be expressed in a system-level form as
+\begin{equation}
+R_k = \frac{B}{K}\log_2\!\left(1+\mathrm{SINR}_k\right),
+\label{eq:unified_rate}
+\end{equation}
+where $\mathrm{SINR}_k$ captures the effect of power allocation and multi-user interference under the adopted transmission scheme.
+
+After satellite NOMA pairing based on the CQI $\Gamma_k^{s}$,the downlink rate of user $k$ under satellite transmission follows the expression in~\eqref{eq:unified_rate}.
+Accordingly, the satellite downlink rate is denoted by $R_k^{s}$.
+For each satellite NOMA pair $(i,j)$ with $\Gamma_i^{s}\le \Gamma_j^{s}$, let $\beta_j^{s}\in(0,1)$ denote the power allocation factor for the strong user.
+The corresponding SINRs are given by
+\begin{align}
+\mathrm{SINR}^{s}_{i}
+&=\frac{(1-\beta_j^{s})P_s\,\Gamma_i^{s}}{\beta_j^{s}P_s\,\Gamma_i^{s}+1},
+\label{eq:sat_sinr_weak}\\
+\mathrm{SINR}^{s}_{j}
+&=\beta_j^{s}P_s\,\Gamma_j^{s},
+\label{eq:sat_sinr_strong}
+\end{align}
+where the strong user applies standard SIC to remove the weak user's signal prior to decoding its own message.
+
+Similarly, for ABS transmission, the achievable access link rate of user $k$, denoted by $R_k^{d}$, follows the same rate expression in~\eqref{eq:unified_rate}, with the ABS bandwidth $B_d$ and the corresponding $\mathrm{SINR}_k^{d}$ determined by the A2G channel conditions.
+
+Unlike satellite transmission, ABS forwarding is additionally constrained by the satellite-to-air (S2A) backhaul link. 
+As a result, the effective downlink rates provided by the ABS under NOMA and OMA modes are given by
+\begin{equation}
+R_k^{dn} = \min\!\left(R_k^{d},\, R_k^{sd}\right), \qquad
+R_k^{do} = \min\!\left(R_k^{o},\, R_k^{sd}\right),
+\label{eq:abs_backhaul_constraint}
+\end{equation}
+where $R_k^{sd}$ denotes the maximum decodable rate at the ABS over the S2A link.
+
+From an optimization perspective, the greedy transmission mode selector aims to maximize the aggregate achievable rate of each ABS-formed user pair within the same transmission interval. Accordingly, the transmission mode is selected by comparing the pair-wise sum rates under all feasible modes.
+
+
+For each ABS-formed user pair $(u,v)$, the ABS determines the transmission mode by comparing the achievable rates under different forwarding options
+\begin{equation}
+m^{\star} = \arg\max_{m \in \mathcal{M}}
+\left( R_u^{(m)} + R_v^{(m)} \right),
+\end{equation}
+where $\mathcal{M}=\{\text{SAT},\text{ABS-NOMA},\text{ABS-OMA-}u,\text{ABS-OMA-}v\}$ denotes the set of feasible transmission modes, and $R_u^{(m)}$ and $R_v^{(m)}$ represent the achievable downlink rates of users $u$ and $v$, respectively, under transmission mode $m$.
+
+
+Accordingly, the following four cases are considered
+\begin{itemize}
+    \item \textbf{Case~1: ABS-assisted NOMA transmission.}  
+    If $R_u^{dn} > R_u^{s}$ and $R_v^{dn} > R_v^{s}$,
+    the ABS serves the user pair using NOMA. In this case, both users are
+    forwarded by the ABS and achieve rates $R_u^{dn}$ and $R_v^{dn}$,
+    respectively.
+
+    \item \textbf{Case~2: ABS-assisted OMA transmission for user $u$.}  
+    If $R_u^{do} > R_u^{s}$ while $R_v^{dn} \le R_v^{s}$,
+    the ABS utilizes OMA and transmits only to user $u$ during the time slot
+    allocated to this pair. User $u$ achieves a rate of $R_u^{do}$, whereas
+    user $v$ is served directly by the satellite.
+
+    \item \textbf{Case~3: ABS-assisted OMA transmission for user $v$.}  
+    If $R_v^{do} > R_v^{s}$ while $R_u^{dn} \le R_u^{s}$,
+    the ABS serves only user $v$ using OMA, and user $u$ is served by the
+    satellite.
+
+    \item \textbf{Case~4: Satellite-only transmission.}  
+    Otherwise, ABS forwarding is not profitable for this user pair.
+    Hence, the ABS remains silent and both users are served directly by
+    the satellite in order to avoid unnecessary resource consumption.
+\end{itemize}
+
+It is worth emphasizing that the transmission mode selection is inherently performed at the level of ABS-formed user pairs.This is because a single ABS transmission action—whether employing NOMA, OMA, or remaining silent—is physically defined only with respect to the specific pair of users that the ABS simultaneously serves within a given transmission interval.As a result, the feasibility, decoding order, and achievable rates of an ABS transmission cannot be meaningfully evaluated outside the context of the corresponding ABS-formed pair.
+
+Moreover, the role of the ABS in the framework is to enhance,rather than replace, the baseline satellite downlink. 
+Accordingly, ABS forwarding is activated only when it can provide tangible rate improvements for the assisted users without compromising the overall downlink efficiency.
+Otherwise, the ABS remains silent to avoid unnecessary backhaul usage and transmission overhead.
+
+The proposed greedy selector operates independently on each ABS-formed user pair, leading to a linear computational complexity with respect to the number of pairs. 
+In contrast, an exhaustive search over all possible mode combinations incurs an exponential complexity and becomes infeasible even for a moderate number of user pairs. 
+Therefore, the greedy strategy offers an attractive trade-off between performance and computational efficiency, making it suitable for practical implementations.
+
+
 \subsection{ABS placement process}
 
 The ABS placement is performed prior to the hybrid transmission decision, since the A2G channel characteristics—and consequently the achievable UAV-assisted rates—are fundamentally determined by the ABS position. Without an appropriately optimized ABS location, the hybrid NOMA/OMA decision would be restricted to a limited set of feasible transmission options, leading to suboptimal system performance.
