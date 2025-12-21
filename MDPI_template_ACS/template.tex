@@ -334,7 +334,82 @@ The proposed greedy selector operates independently on each ABS-formed user pair
 In contrast, an exhaustive search over all possible mode combinations incurs an exponential complexity and becomes infeasible even for a moderate number of user pairs. 
 Therefore, the greedy strategy offers an attractive trade-off between performance and computational efficiency, making it suitable for practical implementations.
 
+\subsection{Resource allocation}
 
+After determining the transmission mode for all users, the S2A backhaul bandwidth is allocated to those users relying on the ABS-assisted relaying.
+Although users may be re-paired at the ABS side to facilitate access transmission, the S2A bandwidth allocation remains satellite-pair based, since the S2A link carries pre-formed satellite NOMA superimposed signals.
+
+For any user utilizing ABS services, the achievable end-to-end downlink rate is constrained by
+\begin{equation}
+R_{u}^{\mathrm{E2E}} = \min\!\left( R_{u}^{\mathrm{A2G}},\, R_{u}^{\mathrm{S2A}} \right),
+\end{equation}
+where $R_{u}^{\mathrm{A2G}}$ denotes the achievable access-link rate, and
+$R_{u}^{\mathrm{S2A}}$ denotes the achievable decoding rate of user $u$ at the ABS over the S2A backhaul link.
+As a consequence, allocating excessive S2A bandwidth yields no further throughput gain once the S2A decoding rate exceeds the corresponding A2G rate, whereas insufficient S2A bandwidth directly degrades the achievable end-to-end performance.
+
+Therefore, the objective of S2A resource allocation is not to maximize the S2A rate itself, but to allocate just enough backhaul bandwidth to eliminate the decode-and-forward (DF) bottleneck, while respecting the total satellite bandwidth constraint.
+Under this design, the end-to-end rate of each user forwarded by the ABS is no longer limited by the S2A link, but is instead entirely determined by the A2G transmission capability.
+
+Under satellite NOMA transmission, the achievable S2A decoding rate of each user at the ABS depends on the allocated S2A bandwidth and the effective signal-to-interference-plus-noise ratio (SINR) experienced during decoding.
+Specifically, for the $k$-th satellite-side user pair, the S2A decoding rates of the strong and weak users can be expressed as
+\begin{align}
+R_{k,j}^{\mathrm{S2A}} &= b_k \log_2\!\left(1 + \beta_{k,j} \gamma_s h_{s2a}\right), \\
+R_{k,i}^{\mathrm{S2A}} &= b_k \log_2\!\left(1 + 
+\frac{\beta_{k,i} \gamma_s h_{s2a}}
+{1 + \beta_{k,j} \gamma_s h_{s2a}}
+\right),
+\end{align}
+where $b_k$ denotes the S2A bandwidth allocated to the $k$-th satellite-side user pair, $\gamma_s$ represents the average satellite SNR, and $h_{s2a}$ denotes the large-scale channel gain of the S2A link between the satellite and the ABS.
+The parameters $\beta_{k,j}$ and $\beta_{k,i}$ are the satellite-side power allocation coefficients associated with the strong and weak users, respectively, which are determined by the satellite NOMA transmission strategy and remain fixed during the resource allocation process.
+The above expressions are introduced to characterize the decoding feasibility at the ABS and to establish a monotonic relationship between the allocated S2A bandwidth and the achievable decoding rate, rather than to perform physical-layer optimization.
+
+Accordingly, the allocated S2A bandwidth should satisfy the following decoding constraint
+\begin{equation}
+R_{k,u}^{\mathrm{S2A}}(b_k) \ge R_{k,u}^{\mathrm{A2G}}, \quad u \in \{i,j\}.
+\end{equation}
+
+Since the S2A decoding rate is a monotonically increasing function of the allocated bandwidth,
+the minimum S2A bandwidth required to satisfy the DF decoding constraint for user $u$
+can be obtained by directly inverting the inequality as
+\begin{equation}
+b_{k,u}^{\min}
+=
+\frac{R_{k,u}^{\mathrm{A2G}}}
+{\log_2\!\left(1+\gamma_{k,u}^{\mathrm{eff}}\right)} .
+\end{equation}
+
+Under satellite NOMA transmission, both users in the $k$-th satellite-side pair must be successfully decoded at the ABS.
+Therefore, the minimum bandwidth required for the $k$-th pair is determined by the most stringent decoding constraint
+\begin{equation}
+b_k^{\min}
+=
+\max \!\left( b_{k,i}^{\min},\, b_{k,j}^{\min} \right).
+\end{equation}
+
+Given the total satellite bandwidth constraint
+\begin{equation}
+\sum_{k=1}^{K} b_k^{\min} \le B_s ,
+\end{equation}
+the S2A bandwidth allocation problem aims to determine $\{b_k\}$ such that the DF decoding constraints are satisfied for all users.
+This problem is convex and can be efficiently solved using the Karush--Kuhn--Tucker (KKT) conditions.
+
+In some cases, the aggregate minimum S2A bandwidth demand may exceed the available satellite bandwidth, i.e.,
+\begin{equation}
+\sum_{k=1}^{K} b_k^{\min} > B_s .
+\end{equation}
+To guarantee feasibility under the limited satellite bandwidth, a proportional scaling strategy is applied.
+Specifically, all S2A bandwidth allocations are uniformly scaled as
+\begin{equation}
+b_k = b_k^{\min} \cdot \frac{B_s}{\sum_{k=1}^{K} b_k^{\min}}, \quad \forall k .
+\end{equation}
+
+The proportional scaling preserves the relative bandwidth demands among different satellite-side user pairs, thereby avoiding abrupt structural changes in the transmission configuration.
+Although this operation may prevent the S2A decoding rate from fully matching the corresponding A2G rate for all users, it ensures a feasible and stable bandwidth allocation without introducing additional combinatorial optimization.
+
+It is worth noting that, when the satellite bandwidth is insufficient to support all A2G demands, the achievable end-to-end rates may be lower than the ideal values predicted by the greedy mode selection.
+This is because the greedy mode selection is performed under the assumption that the S2A backhaul is not the limiting factor, and thus identifies the transmission structure that maximizes the potential system throughput.
+The subsequent bandwidth scaling reflects the physical limitation of the satellite backhaul rather than a suboptimal design choice.
+By separating the structural decision from the feasibility enforcement, the proposed framework achieves a favorable balance between performance, computational tractability, and algorithmic stability.
 \subsection{ABS placement process}
 
 The ABS placement is performed prior to the hybrid transmission decision, since the A2G channel characteristics—and consequently the achievable UAV-assisted rates—are fundamentally determined by the ABS position. Without an appropriately optimized ABS location, the hybrid NOMA/OMA decision would be restricted to a limited set of feasible transmission options, leading to suboptimal system performance.
