@@ -342,6 +342,9 @@ def plot_3d_user_distribution_with_abs(user_positions, abs_position,
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     print(f"[OK] 3D图表已保存: {save_path}")
 
+    # 显示图表
+    plt.show()
+
     return fig, ax
 
 
