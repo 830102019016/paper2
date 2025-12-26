@@ -441,289 +441,162 @@ Due to the continuous nature of the optimization variables and the presence of n
 The optimization procedure is initialized at the geometric centroid of the user distribution in the horizontal plane, combined with a nominal altitude within the feasible range. To ensure numerical stability and reproducibility during the iterative optimization, the small-scale fading realizations of the A2G channels are fixed throughout the process, such that the objective function remains deterministic. At each iteration, the ABS position is updated according to the L-BFGS-B search direction, and the resulting candidate solution is projected onto the feasible domain defined by the coverage and altitude constraints.
 
 By directly optimizing the communication performance rather than geometric proximity, the proposed ABS placement strategy effectively captures the coupled impact of position, transmission mode selection, and resource allocation. This joint optimization mechanism enables the ABS to dynamically balance A2G access quality and S2A backhaul capacity, thereby improving the overall system throughput.
-\section{Joint Transmission Decision for System Throughput Maximization}
-\subsection{Transmission Options and Decision Variables}
 
-With the achievable rates of the direct satellite downlink characterized in the previous section, we now specify the transmission options available to the system and the corresponding decision variables. The objective is to flexibly exploit either direct satellite delivery or UAV-assisted transmission to maximize the overall system throughput.
-
-We consider a set of $N=2K$ terrestrial UEs grouped into $K$ NOMA pairs. For each UE pair, the system can select one transmission option from a predefined candidate set, which includes direct satellite transmission and ABS-assisted downlink modes. In particular, the following transmission options are available:
-\begin{itemize}
-    \item \textit{Direct satellite transmission}: both UEs in the pair are served directly by the satellite using the satellite NOMA scheme described in Section~2.2.
-    \item \textit{ABS-assisted transmission}: the downlink data are delivered to the UE pair via the aerial base station (ABS), where either NOMA or OMA transmission can be employed depending on the channel conditions.
-\end{itemize}
-
-Each transmission option is associated with a corresponding achievable rate determined by the underlying satellite-to-ground or air-to-ground links. Notably, ABS-assisted transmission is activated only when it yields a higher rate contribution than direct satellite delivery; otherwise, the system falls back to pure satellite transmission. This design enables the ABS to be utilized selectively, avoiding unnecessary relaying when the direct satellite link is already sufficient.
-
-Let $\mathcal{M}_k$ denote the set of feasible transmission options for the $k$-th UE pair. The transmission decision problem can then be interpreted as selecting one option from $\mathcal{M}_k$ for each UE pair, subject to system-level constraints and the overall throughput maximization objective. Importantly, the decision variables are defined at the UE-pair level, while the resulting system performance is evaluated in terms of the aggregate rate across all UEs.
-
-\subsection{System-Level Optimization Objective}
-
-Based on the transmission options defined in the previous subsection, the objective of the considered system is to maximize the aggregate downlink throughput across all UEs. Rather than optimizing individual links or UE pairs in isolation, a system-level objective is adopted to capture the coupled impact of transmission mode selection, resource sharing, and ABS utilization.
-
-Let $R_{u}$ denote the achievable downlink rate of UE $u$, which depends on the selected transmission option for its associated UE pair. The overall system throughput maximization problem is then formulated as
-\begin{equation}
-\max \quad \sum_{u=1}^{N} R_{u},
-\label{eq:system_sum_rate}
-\end{equation}
-where the summation is taken over all UEs served by the system. This objective naturally accounts for both direct satellite transmission and ABS-assisted delivery, as well as the interactions among UEs sharing the same transmission resources.
-
-It is important to emphasize that the ABS placement strategy described in Section~2.1 and the satellite NOMA transmission model in Section~2.2 are not optimized independently. Instead, they jointly contribute to the achievable rates $R_u$ and are evaluated through the unified system-level objective in~\eqref{eq:system_sum_rate}. As a result, the system selectively activates UAV-assisted transmission only when it provides a net throughput gain, while reverting to pure satellite transmission in scenarios where ABS assistance is unnecessary or ineffective.
-
-The adoption of a system-wide sum-rate objective enables coordinated transmission decisions across all UE pairs and forms the foundation for the joint decision formulation and iterative optimization framework presented in the following subsections.
-
-\subsection{Joint and Coordinated Decision Formulation}
-
-Based on the transmission options defined in Section~3.1 and the system-level objective in Section~3.2, the joint transmission decision problem is formulated to coordinate the selection of transmission modes across all UE pairs. Unlike pair-wise greedy selection, the proposed formulation explicitly accounts for system-wide interactions among UE pairs and enables coordinated utilization of satellite and ABS resources.
-
-Let $\mathcal{K}=\{1,\dots,K\}$ denote the set of UE pairs. For each pair $k\in\mathcal{K}$, we define a finite set of feasible transmission options $\mathcal{M}_k$. Each option $m\in\mathcal{M}_k$ corresponds to a specific combination of transmission links (direct satellite or ABS-assisted) and access schemes (NOMA or OMA), and yields a known achievable rate for the two UEs in pair $k$.
-
-We introduce a binary decision variable
-\begin{equation}
-x_{k,m} =
-\begin{cases}
-1, & \text{if transmission option $m$ is selected for UE pair $k$}, \\
-0, & \text{otherwise}.
-\end{cases}
-\end{equation}
-To ensure that each UE pair adopts exactly one transmission option, the following constraint is imposed:
-\begin{equation}
-\sum_{m\in\mathcal{M}_k} x_{k,m} = 1, \quad \forall k \in \mathcal{K}.
-\label{eq:option_selection_constraint}
-\end{equation}
-
-Let $R_{k,m}$ denote the aggregate achievable downlink rate of UE pair $k$ when transmission option $m$ is selected. The joint transmission decision problem can then be formulated as the following integer linear programming (ILP) problem:
-\begin{equation}
-\begin{aligned}
-\max_{\{x_{k,m}\}} \quad & \sum_{k\in\mathcal{K}} \sum_{m\in\mathcal{M}_k} x_{k,m} \, R_{k,m} \\
-\text{s.t.} \quad 
-& \sum_{m\in\mathcal{M}_k} x_{k,m} = 1, \quad \forall k \in \mathcal{K}, \\
-& x_{k,m} \in \{0,1\}, \quad \forall k \in \mathcal{K}, \; m \in \mathcal{M}_k.
-\end{aligned}
-\label{eq:joint_decision_ilp}
-\end{equation}
-
-The formulation in~\eqref{eq:joint_decision_ilp} jointly optimizes the transmission decisions of all UE pairs under a unified system-level objective. Different physical transmission behaviors, including activating ABS-assisted transmission for both UEs, for only one UE, or for neither of them, naturally emerge as feasible solutions of the ILP without explicit case enumeration. This unified formulation avoids heuristic rule-based decision making and enables coordinated selection across UE pairs.
-
-In practice, the achievable rates $R_{k,m}$ depend on the ABS placement, channel realizations, and access schemes, and are updated as these system components evolve. While the ILP formulation provides a structured representation of the joint decision problem, its role in this work is to enable coordinated system-level decision making rather than to claim theoretical optimality. Efficient solution strategies and low-complexity alternatives can be employed depending on the system scale and implementation requirements.
-
-\subsection{Iterative Joint Optimization Framework}
-
-The joint transmission decision problem formulated in the previous subsection is embedded into an iterative system-level optimization framework, which coordinates ABS placement, achievable rate evaluation, and transmission mode selection. The key idea is to progressively refine system decisions based on the resulting throughput performance, rather than relying on a one-shot optimization.
-
-Specifically, the framework operates in an iterative manner. Given an initial ABS position, the achievable rates of both direct satellite transmission and ABS-assisted transmission are evaluated for all UE pairs. Based on these rates, the joint transmission decision problem in~\eqref{eq:joint_decision_ilp} is solved to determine the preferred transmission option for each UE pair. The resulting system throughput serves as a performance indicator that implicitly reflects the effectiveness of the current ABS deployment and transmission configuration.
-
-The feedback from the transmission decision to the ABS placement is intentionally designed to be indirect and lightweight. Instead of exchanging detailed per-link information, only the aggregate system throughput is used to guide the subsequent update of the ABS position. This design significantly reduces signaling overhead and computational complexity, while preserving the ability to adapt the ABS deployment to changing network conditions.
-
-An important feature of the proposed framework is its ability to intelligently activate or deactivate ABS-assisted transmission. When ABS assistance provides a throughput improvement, the framework selectively assigns one or both UEs in a pair to ABS-assisted transmission using either NOMA or OMA. Conversely, when direct satellite transmission already achieves satisfactory performance, the system automatically falls back to satellite-only delivery, thereby avoiding unnecessary ABS utilization and conserving aerial and spectral resources.
-
-The iterative process continues until convergence or a predefined stopping criterion is met. Although theoretical convergence guarantees are not explicitly claimed, extensive simulations demonstrate that the proposed framework converges rapidly and yields stable performance gains. Overall, this iterative joint optimization framework enables coordinated system-level decision making and provides a practical and flexible solution for integrating UAV-assisted transmission into satellite networks.
-
-\subsection{baseline}
-As described previously, ABS is integrated into the satellite network to improve the QoS of terrestrial users. Towards this end, the ABS should first receive and decode the NOMA superimposed signals of each pair of MTs via the S2A channel. The S2A channel gain can be expressed as
-\begin{equation}
-\Lambda_{sd}
-= \frac{G_{t}^{s} G_{r}^{sd}}{L_{sd}^{\mathrm{FS}} N_{sd}}.
-\end{equation}
-The maximum achievable decoding rates which succeed by the ABS through the S2A channel for each $MT_j^s$ and $MT_i^s$ in pair are
-\begin{equation}
-R_{j}^{sd}
-= \frac{B_{s}}{K} \log_{2}\!\left( 1 + \beta_{j}^{s} P_{s} \Lambda_{sd} \right),
-\end{equation}
-\begin{equation}
-R_{i}^{sd}
-= \frac{B_{s}}{K} \log_{2}\!\left(
-1 + \frac{(1 - \beta_{j}^{s}) P_{s} \Lambda_{sd}}
-{\beta_{j}^{s} P_{s} \Lambda_{sd} + 1}
-\right).
-\end{equation}
-
-Note that, the ABS obtains all the pair indices from the VLEO through a dedicated control channel to identify the users comprising each pair and their role, e.g., strong or weak satellite channel users. Also, the ABS acquires the achievable rate $R_l^s$ of each $MT_l$ with the satellite, through the same channel.
-
-Next, the ABS should forward the decoded signals to the MTs through the A2G channel, utilizing the proposed hybrid NOMA/OMA transmission scheme. Consequently, we consider that each $MT_l$ reports the CSI of the corresponding A2G link to the ABS. Therefore, the ABS calculates the channel gain of the A2G link for each M Tl as follows
-\begin{equation}
-\Gamma_{l}^{d}
-= \frac{G_{t}^{d} G_{r}^{d}}{L_{l}^{\mathrm{A2G}}(h, r_{l}) \, N_{d}} \, |h_{l}^{d}|^{2}.
-\end{equation}
-
-Following the same NOMA user pairing policy as the VLEO, the ABS forms $K$ MT pairs, considering now the channel gains of the A2G links. Therefore, each pair consists of the strong A2G channel user $MT_j^d$, and the weak A2G channel user $MT_i^d$, where $\Gamma_{j}^{d} \ge \Gamma_{i}^{d}$. Subsequently, calculates the optimal power allocation factor $\beta_j^d$ for the $MT_j^d$ by replacing $s$ with $d$ in expression \ref{power allocation}.Also, the achievable rates in NOMA, $R_j^d$ and $MT_i^d$,are given by the expressions \ref{achievable rates j} and \ref{achievable rates i}, respectively, by replacing again $s$ with $d$.The rates that ABS can offer to $MT_j^d$ and $MT_i^d$, utilizing the NOMA technique, are $R_{j}^{dn} = \min\left( R_{j}^{d},\, R_{j}^{sd} \right)$ and $R_{i}^{dn} = \min\left( R_{i}^{d},\, R_{i}^{sd} \right)$,respectively.
-
-Lastly, the ABS has to decide whether it is profitable for each pair of MTs to transmit the superimposed signal or to transmit only the signal of one MT of each pair utilizing the OMA technique. Also, the ABS can avoid forwarding the satellite signals if the ABS transmission is not profitable for both MTs in pair. Therefore, the achievable rate that each $MT_l$ can achieve from the ABS through OMA, is equal to
-\begin{equation}
-R_{l}^{o}
-= \frac{B_{d}}{K} \log_{2}\!\left( 1 + P_{d} \Gamma_{l}^{d} \right).
-\end{equation}
-Each $MT_l$ will experience higher rates if the ABS uses OMA, i.e., $R_{l}^{o} \ge R_{l}^{d}$, since the same bandwidth as NOMA is allocated for OMA transmission, and whole $P_d$ is allocated to $MT_l$. However, the maximum achievable OMA rate of $MT_l$ is restricted by the expression $R_{l}^{do} = \min\left( R_{l}^{o},\, R_{l}^{sd} \right)$,since the ABS may provide a higher rate to the $MT_l$,but the rate at which ABS decoded its signal from the VLEO is lower and vice versa. There are four different cases that the ABS considers for each MT pair
-\begin{itemize}
-\item	$\bf{if}$ $R_{i}^{s} < R^{dn}_i$ $\bf{and}$ $R_{j}^{s} < R_{j}^{dn}$: In this case, the pair of MTs formed by the ABS profits from the NOMA transmission as both MTs achieve greater rates if served from the ABS instead of the satellite.
-\item	$\bf{if}$ $R_{i}^{s} < R^{dn}_i$ $\bf{and}$ $R_{j}^{s} \ge R_{j}^{dn}$: In this case, only $MT_i^d$ profits from the ABS transmission. Thus, the ABS  utilizes OMA and transmits only to $MT_i^d$ or the timeslot allocated to this pair. $MT_i^d$ achieves a rate equal to $R_i^{do}$.
-\item	$\bf{if}$ $R_{i}^{s} \ge R^{dn}_i$ $\bf{and}$ $R_{j}^{s} < R_{j}^{dn}$: In this case, only $MT_j^d$ profits from the ABS transmission. Therefore, the ABS utilizes OMA and transmits only to $MT_j^d$ for the timeslot allocated to this pair. $MT_j^d$ achieves a rate equal to $R_i^{do}$.
-\item  Otherwise, the communication for this MT pair is not profitable and ABS does not transmit to these pair of users in order to save resources.
-\end{itemize}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Results}
 
-This section may be divided by subheadings. It should provide a concise and precise description of the experimental results, their interpretation as well as the experimental conclusions that can be drawn.
-\subsection{Subsection}
-\subsubsection{Subsubsection}
+The proposed SATCON framework was implemented in Python, and all simulations were conducted on a workstation equipped with an Intel Core i7 processor and 16~GB RAM. Unless otherwise specified, the simulation parameters are summarized in Table~\ref{tab:sim_params}.
+\begin{table}[t]
+\centering
+\caption{Simulation Parameters}
+\label{tab:sim_params}
+\begin{tabular}{lll}
+\toprule
+\textbf{Parameter} & \textbf{Symbol} & \textbf{Value} \\
+\midrule
+Number of users & $N$ & 32 \\
+Coverage radius & $R$ & 500 m \\
+Satellite altitude & $H_s$ & 600 km \\
+Satellite elevation angle & $E$ & $10^\circ$, $20^\circ$, $40^\circ$ \\
+Satellite bandwidth & $B_s$ & 10 MHz \\
+ABS bandwidth & $B_d$ & 0.4, 1.2, 2.0, 3.0 MHz \\
+Satellite transmit power & $P_s$ & 30 dBm \\
+ABS transmit power & $P_d$ & 23 dBm \\
+Satellite antenna gain & $G_s^t$ & 40 dBi \\
+ABS antenna gain & $G_d^t$ & 5 dBi \\
+User antenna gain & $G_u^r$ & 0 dBi \\
+ABS altitude range & $h_d$ & 100--500 m \\
+Carrier frequency (S2G) & $f_s$ & 2 GHz \\
+Carrier frequency (A2G) & $f_d$ & 2.4 GHz \\
+Noise power density & $N_0$ & $-174$ dBm/Hz \\
+Path loss exponent (A2G) & $\alpha$ & 2.5 \\
+Random seed & -- & 42 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
-Bulleted lists look like this:
+We consider a single-beam satellite coverage scenario, where $N$ ground users are uniformly distributed within a circular service area of radius $R=500$~m. A low Earth orbit (LEO) satellite at altitude $H_s=600$~km provides downlink transmission to the users either directly or via an aerial base station (ABS) acting as a decode-and-forward relay. The ABS altitude is constrained within the range $h_d \in [100, 500]$~m.
+
+For the satellite-to-ground (S2G) and satellite-to-ABS (S2A) links, large-scale path loss is determined by satellite geometry and elevation angle $E$, while small-scale fading is neglected due to the dominant line-of-sight (LoS) component. For the air-to-ground (A2G) links, we adopt a distance-dependent path loss model with exponent $\alpha=2.5$ and incorporate Rayleigh fading to capture small-scale channel variations.
+
+To ensure statistical reliability, each simulation result is obtained by averaging over 50 independent Monte Carlo realizations with different user locations and fading samples, while fixing the random seed for reproducibility. Noise power is computed based on a noise power spectral density of $N_0=-174$~dBm/Hz.
+
+We evaluate system performance using the following metrics
 \begin{itemize}
-\item	First bullet;
-\item	Second bullet;
-\item	Third bullet.
+  \item \emph{System sum rate (Mbps)}: defined as the aggregate downlink throughput of all users in the network.
+  \item \emph{Spectral efficiency (bps/Hz)}: computed as the system sum rate normalized by the total satellite bandwidth.
+  \item \emph{Average user rate (Mbps)}: obtained by dividing the system sum rate by the number of served users.
+\end{itemize}
+These metrics jointly reflect the efficiency, scalability, and fairness of the proposed framework.Unless otherwise specified, these metrics are reported as the average values over all Monte Carlo realizations.
+
+\subsection{Overall Performance Comparison with Baseline Schemes}
+
+This subsection evaluates the overall performance of the proposed SATCON framework by comparing it with representative baseline schemes under identical system settings. All schemes share the same satellite bandwidth, transmit power, user distribution, and channel models, ensuring a fair and meaningful comparison.
+
+Specifically, the following baseline schemes are considered:
+\begin{itemize}
+  \item \emph{SAT-NOMA}: a conventional satellite-only transmission scheme where all users are directly served by the satellite using NOMA, without ABS assistance.
+  \item \emph{Heuristic + Uniform}: a sub-optimal scheme that employs heuristic transmission mode selection, uniform bandwidth allocation, and fixed ABS placement based on geometric considerations.
+  \item \emph{Heuristic + Uniform + k-means} (Baseline): a complete baseline framework that integrates heuristic mode selection, uniform resource allocation, and ABS placement via k-means clustering.
 \end{itemize}
 
-Numbered lists can be added as follows:
-\begin{enumerate}
-\item	First item; 
-\item	Second item;
-\item	Third item.
-\end{enumerate}
+The proposed SATCON framework differs from the baseline by jointly optimizing transmission mode selection, bandwidth allocation, and ABS placement in a unified manner. Importantly, no additional spectrum or transmit power is introduced in SATCON; the performance gain is solely achieved through more efficient utilization of existing resources.
+\begin{figure}[H]
+%\isPreprints{\centering}{} % Only used for preprints
+\centering
+\includegraphics[width=12.5cm]{Definitions/fig2_abs_bandwidth_impact}
+\caption{Average spectral efficiency versus SNR for different ABS bandwidth values at a low satellite elevation angle ($E=10^\circ$).}
+\label{fig:se_abs_bandwidth}
+\end{figure}
 
-The text continues here.
+Figure~\ref{fig:se_abs_bandwidth} illustrates the average spectral efficiency of mobile terminals as a function of SNR for a low satellite elevation angle of $E=10^\circ$, under different ABS bandwidth configurations. The SAT-NOMA scheme, which relies solely on direct satellite transmission, exhibits the lowest spectral efficiency across the entire SNR range due to severe path loss at low elevation angles.
+
+By contrast, SATCON significantly improves spectral efficiency by leveraging ABS-assisted relaying. When the ABS bandwidth is limited ($B_d=0.4$~MHz), the performance gain over SAT-NOMA remains modest, indicating that the ABS-to-ground link becomes a bottleneck. As $B_d$ increases to $1.2$~MHz, a noticeable improvement is observed, demonstrating that moderate ABS bandwidth is sufficient to effectively support relay-assisted transmission.
+
+Further increasing the ABS bandwidth to $2.0$~MHz and $3.0$~MHz continues to enhance spectral efficiency, although the marginal gain gradually diminishes. This behavior suggests that, beyond a certain point, the end-to-end performance becomes constrained by the satellite-to-ABS link rather than the ABS access link. Overall, Fig.~2 confirms that appropriate ABS bandwidth provisioning is crucial for unlocking the benefits of SATCON, especially under low-elevation satellite scenarios.
+\begin{figure}[H]
+%\isPreprints{\centering}{} % Only used for preprints
+\centering
+\includegraphics[width=12.5cm]{Definitions/figure3_bandwidth_impact}
+\caption{System sum rate versus SNR for different ABS bandwidth values at a low satellite elevation angle ($E=10^\circ$).}
+\label{fig:sumrate_abs_bandwidth}
+\end{figure}
+
+Figure~\ref{fig:sumrate_abs_bandwidth} depicts the system sum rate as a function of SNR for a low satellite elevation angle of $E=10^\circ$ under different ABS bandwidth configurations. Consistent with the spectral efficiency trends observed in Fig.~2, the proposed SATCON framework achieves a significantly higher sum rate than the SAT-NOMA baseline across the entire SNR range.
+
+When the ABS bandwidth is small ($B_d=0.4$~MHz), SATCON provides only a marginal improvement over SAT-NOMA, indicating that the limited ABS access capacity restricts the effectiveness of relay-assisted transmission. As the ABS bandwidth increases to $1.2$~MHz, a clear performance gain emerges, demonstrating that moderate ABS bandwidth is sufficient to substantially enhance the end-to-end throughput. Further increasing $B_d$ to $2.0$~MHz and $3.0$~MHz leads to additional sum rate improvements, particularly in the medium-to-high SNR regime.
+
+Notably, the growth rate of the sum rate gradually slows down as $B_d$ becomes large, suggesting that the satellite-to-ABS backhaul link increasingly dominates the end-to-end performance. This observation highlights a practical design trade-off: allocating excessive ABS bandwidth yields diminishing returns when the satellite link capacity becomes the primary bottleneck. Overall, Fig.~3 confirms that SATCON can effectively translate spectral efficiency gains into tangible throughput improvements, while also revealing the optimal ABS bandwidth range for cost-efficient deployment.
+\begin{figure}[H]
+%\isPreprints{\centering}{} % Only used for preprints
+\centering
+\includegraphics[width=12.5cm]{Definitions/figure4_elevation_impact}
+\caption{Average spectral efficiency versus SNR for different satellite elevation angles with a fixed ABS bandwidth of $B_d=1.2$~MHz.}
+\label{fig:se_elevation}
+\end{figure}
+
+Figure~\ref{fig:se_elevation} shows the average spectral efficiency as a function of SNR for different satellite elevation angles, with the ABS bandwidth fixed at $B_d=1.2$~MHz. The SAT-NOMA baseline and the proposed SATCON framework are compared under identical system settings.
+
+It can be observed that the spectral efficiency of both schemes improves as the elevation angle increases from $10^\circ$ to $40^\circ$, due to the reduced propagation distance and path loss of the satellite links. However, the relative performance gain provided by SATCON strongly depends on the elevation angle. At low elevation ($E=10^\circ$), SATCON achieves a clear and consistent advantage over SAT-NOMA across the entire SNR range, indicating that ABS-assisted relaying is particularly effective in mitigating severe propagation losses.
+
+When the elevation angle increases to $E=20^\circ$, the performance gap between SATCON and SAT-NOMA becomes smaller but remains noticeable, especially in the medium-to-high SNR regime. In contrast, for a high elevation angle of $E=40^\circ$, the two schemes exhibit nearly identical spectral efficiency, suggesting that the direct satellite link already provides near-optimal performance and leaves limited room for ABS-assisted enhancement.
+
+These results demonstrate that the primary benefit of SATCON arises under challenging propagation conditions, such as low-elevation satellite passes, whereas its advantage naturally diminishes in favorable channel scenarios. This behavior confirms that SATCON does not artificially inflate performance but instead adapts its gain to the actual severity of the wireless environment.
+
 
 \subsection{Figures, Tables and Schemes}
 
-All figures and tables should be cited in the main text as Figure~\ref{fig1}, Table~\ref{tab1}, etc.
-
 \begin{figure}[H]
 %\isPreprints{\centering}{} % Only used for preprints
-\includegraphics[width=4.0 cm]{Definitions/logo-mdpi}
-\caption{This is a figure. Schemes follow the same formatting.\label{fig1}}
-\end{figure}   
-\unskip
-
-\begin{table}[H] 
-%\small % Change table font size
-\caption{This is a table caption. Tables should be placed in the main text near to the first time they are~cited.\label{tab1}}
-%\isPreprints{\centering}{} % Only used for preprints
-\begin{tabularx}{\textwidth}{CCC}
-\toprule
-\textbf{Title 1}	& \textbf{Title 2}	& \textbf{Title 3}\\
-\midrule
-Entry 1		& Data			& Data\\
-Entry 2		& Data			& Data \textsuperscript{1}\\
-\bottomrule
-\end{tabularx}
-
-\noindent{\footnotesize{\textsuperscript{1} Tables may have a footer.}}
-\end{table}
-
-The text continues here (Figure~\ref{fig2} and Table~\ref{tab2}).
-
-% Example of a figure that spans the whole page width and with subfigures. The same concept works for tables, too.
-\begin{figure}[H]
-%\isPreprints{}{% This command is only used for ``preprints''.
-\begin{adjustwidth}{-\extralength}{0cm}
 \centering
-%} % If the paper is ``preprints'', please uncomment this parenthesis.
-\subfloat[\centering]{\includegraphics[width=7.0cm]{Definitions/logo-mdpi}}
-%\hfill
-\subfloat[\centering]{\includegraphics[width=7.0cm]{Definitions/logo-mdpi}}\\
-\subfloat[\centering]{\includegraphics[width=7.0cm]{Definitions/logo-mdpi}}
-%\hfill
-\subfloat[\centering]{\includegraphics[width=7.0cm]{Definitions/logo-mdpi}}
-%\isPreprints{}{% This command is only used for ``preprints''.
-\end{adjustwidth}
-%} % If the paper is ``preprints'', please uncomment this parenthesis.
-\caption{This is a wide figure. Schemes follow the same formatting. If there are multiple panels, they should be listed as: (\textbf{a}) Description of what is contained in the first panel. (\textbf{b}) Description of what is contained in the second panel. (\textbf{c}) Description of what is contained in the third panel. (\textbf{d}) Description of what is contained in the fourth panel. Figures should be placed in the main text near to the first time they are cited. A caption on a single line should be centered.\label{fig2}}
-\end{figure} 
+\includegraphics[width=12.5cm]{Definitions/ablation_heatmap_final}
+\caption{Ablation study showing the relative performance gain of different optimization components with respect to the baseline scheme under varying SNR conditions.}
+\label{fig:ablation_heatmap}
+\end{figure}
+To quantify the contribution of each optimization component in SATCON, we conduct an ablation study by selectively enabling different modules while keeping all other system parameters unchanged. The baseline scheme corresponds to the heuristic transmission mode selection with uniform bandwidth allocation and k-means-based ABS placement.
 
-\begin{table}[H]
-\caption{This is a wide table.\label{tab2}}
-%\isPreprints{\centering}{% This command is only used for ``preprints''.
-	\begin{adjustwidth}{-\extralength}{0cm}
-%} % If the paper is ``preprints'', please uncomment this parenthesis.
-%\isPreprints{\begin{tabularx}{\textwidth}{CCCC}}{% This command is only used for ``preprints''.
-		\begin{tabularx}{\fulllength}{CCCC}
-%} % If the paper is ``preprints'', please uncomment this parenthesis.
-			\toprule
-			\textbf{Title 1}	& \textbf{Title 2}	& \textbf{Title 3}     & \textbf{Title 4}\\
-			\midrule
-\multirow[m]{3}{*}{Entry 1 *}	& Data			& Data			& Data\\
-			  	                   & Data			& Data			& Data\\
-			             	      & Data			& Data			& Data\\
-                   \midrule
-\multirow[m]{3}{*}{Entry 2}    & Data			& Data			& Data\\
-			  	                  & Data			& Data			& Data\\
-			             	     & Data			& Data			& Data\\
-			\bottomrule
-		\end{tabularx}
-%		\isPreprints{}{% This command is only used for ``preprints''.
-	\end{adjustwidth}
-%} % If the paper is ``preprints'', please uncomment this parenthesis.
-	\noindent{\footnotesize{* Tables may have a footer.}}
-\end{table}
+Fig.~\ref{fig:ablation_heatmap} illustrates the relative performance gain of different configurations with respect to the baseline under varying SNR conditions. It can be observed that optimizing transmission mode selection alone provides limited performance improvement, especially in the low-SNR regime. Similarly, resource allocation optimization yields only marginal gains when applied in isolation.
 
-%\begin{listing}[H]
-%\caption{Title of the listing}
-%\rule{\columnwidth}{1pt}
-%\raggedright Text of the listing. In font size footnotesize, small, or normalsize. Preferred format: left aligned and single spaced. Preferred border format: top border line and bottom border line.
-%\rule{\columnwidth}{1pt}
-%\end{listing}
+In contrast, ABS position optimization contributes a noticeably larger performance gain, indicating that spatial deployment plays a dominant role in improving system throughput. When all three components are jointly optimized, SATCON achieves the highest performance gain across all SNR values, with the maximum improvement exceeding 30\% around $\mathrm{SNR}=15$~dB.
 
-Text.
+These results demonstrate that no single optimization module is sufficient to fully exploit the system potential. Instead, the performance advantage of SATCON stems from the joint optimization of transmission mode selection, resource allocation, and ABS placement, with position optimization being the most influential component.
 
-Text.
+\begin{figure}[H]
+%\isPreprints{\centering}{} % Only used for preprints
+\centering
+\includegraphics[width=12.5cm]{Definitions/comparison_baseline_3d}
+\caption{Three-dimensional user distribution and ABS placement obtained by the baseline scheme (Heuristic + Uniform + k-means) at $E=10^\circ$ and $\mathrm{SNR}=15$~dB.}
+\label{fig:baseline_3d}
+\end{figure}
 
-\subsection{Formatting of Mathematical Components}
+\begin{figure}[H]
+%\isPreprints{\centering}{} % Only used for preprints
+\centering
+\includegraphics[width=12.5cm]{Definitions/comparison_ours_3d}
+\caption{Three-dimensional user distribution and optimized ABS placement obtained by SATCON (Greedy + KKT + L-BFGS-B) under the same system settings as Fig.~\ref{fig:baseline_3d}.}
+\label{fig:ours_3d}
+\end{figure}
 
-This is the example 1 of equation:
-\begin{linenomath}
-\begin{equation}
-a = 1,
-\end{equation}
-\end{linenomath}
-the text following an equation need not be a new paragraph. Please punctuate equations as regular text.
-%% If the documentclass option "submit" is chosen, please insert a blank line before and after any math environment (equation and eqnarray environments). This ensures correct linenumbering. The blank line should be removed when the documentclass option is changed to "accept" because the text following an equation should not be a new paragraph.
+To further illustrate the impact of ABS placement optimization, Fig.~\ref{fig:baseline_3d} and Fig.~\ref{fig:ours_3d} visualize the three-dimensional user distribution and the resulting ABS positions obtained by the baseline scheme and SATCON, respectively.
 
-This is the example 2 of equation:
-%\isPreprints{}{% This command is only used for ``preprints''.
-\begin{adjustwidth}{-\extralength}{0cm}
-%} % If the paper is ``preprints'', please uncomment this parenthesis.
-\begin{equation}
-a = b + c + d + e + f + g + h + i + j + k + l + m + n + o + p + q + r + s + t + u + v + w + x + y + z
-\end{equation}
-%\isPreprints{}{% This command is only used for ``preprints''.
-\end{adjustwidth}
-%} % If the paper is ``preprints'', please uncomment this parenthesis.
+As shown in Fig.~\ref{fig:baseline_3d}, the baseline method places the ABS near the geometric center of the user distribution, without explicitly considering heterogeneous channel conditions or transmission modes. In contrast, Fig.~\ref{fig:ours_3d} shows that SATCON positions the ABS at a different location and altitude, reflecting a more balanced trade-off between satellite-to-ABS and ABS-to-ground link qualities.
 
-%% Example of a page in landscape format (with table and table footnote).
-%\startlandscape
-%\begin{table}[H] %% Table in wide page
-%%\isPreprints{\centering}{} % This command is only used for ``preprints''.
-%\caption{This is a very wide table.\label{tab3}}
-%	\begin{tabularx}{\textwidth}{CCCC}
-%		\toprule
-%		\textbf{Title 1}	& \textbf{Title 2}	& \textbf{Title 3}	& \textbf{Title 4}\\
-%		\midrule
-%		Entry 1		& Data			& Data			& This cell has some longer content that runs over two lines.\\
-%		Entry 2		& Data			& Data			& Data\textsuperscript{1}\\
-%		\bottomrule
-%	\end{tabularx}
-%%\isPreprints{}{% This command is only used for ``preprints''.
-%	\begin{adjustwidth}{+\extralength}{0cm}
-%%} % If the paper is ``preprints'', please uncomment this parenthesis.
-%		\noindent\footnotesize{\textsuperscript{1} This is a table footnote.}
-%%\isPreprints{}{% This command is only used for ``preprints''.
-%	\end{adjustwidth}
-%%} % If the paper is ``preprints'', please uncomment this parenthesis.
-%\end{table}
-%\finishlandscape
+This difference in spatial deployment leads to a significantly higher system sum rate under identical system settings. The visualization confirms that SATCON does not merely improve performance through numerical optimization, but also induces a meaningful structural change in ABS deployment that better adapts to the underlying wireless environment.
 
-Please punctuate equations as regular text. Theorem-type environments (including propositions, lemmas, corollaries etc.) can be formatted as follows:
-%% Example of a theorem:
-\begin{Theorem}
-Example text of a theorem.
-\end{Theorem}
+\begin{figure}[H]
+%\isPreprints{\centering}{} % Only used for preprints
+\centering
+\includegraphics[width=12.5cm]{Definitions/scalability_analysis}
+\caption{Scalability analysis of SATCON and the baseline scheme in terms of average user rate under different numbers of users ($E=10^\circ$, $\mathrm{SNR}=15$~dB, $B_d=1.2$~MHz).}
+\label{fig:scalability}
+\end{figure}
 
-The text continues here. Proofs must be formatted as follows:
+To evaluate the scalability of the proposed framework, we analyze system performance under different numbers of users while keeping the total bandwidth fixed. Fig.~\ref{fig:scalability} compares the average user rate achieved by SATCON and the baseline scheme for $N=32$, $64$, and $100$ users.
 
-%% Example of a proof:
-\begin{proof}[Proof of Theorem 1]
-Text of the proof. Note that the phrase ``of Theorem 1'' is optional if it is clear which theorem is being referred to.
-\end{proof}
-The text continues here.
+As expected, the average user rate decreases for both schemes as the number of users increases, due to intensified resource sharing. However, SATCON consistently outperforms the baseline across all network sizes, maintaining a nearly constant relative performance gain of approximately 30\%.
+
+This result indicates that the effectiveness of SATCON does not diminish as the network scales. The joint optimization framework adapts to increased user density by dynamically adjusting ABS placement and resource allocation, demonstrating its practical applicability to moderately large-scale satellite–terrestrial integrated networks.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Discussion}

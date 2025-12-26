@@ -1,0 +1,47 @@
+{
+  "32": {
+    "baseline": {
+      "sum_rate": 20188817.46576885,
+      "avg_user_rate": 630900.5458052766,
+      "runtime": 1.4453744888305664
+    },
+    "satcon": {
+      "sum_rate": 27641587.053884916,
+      "avg_user_rate": 863799.5954339036,
+      "runtime": 0.3120436668395996
+    },
+    "sum_rate_gain": 7452769.588116065,
+    "rate_gain_percent": 36.9153349410019,
+    "avg_rate_gain_percent": 36.9153349410019
+  },
+  "64": {
+    "baseline": {
+      "sum_rate": 19969184.47302476,
+      "avg_user_rate": 312018.50739101187,
+      "runtime": 0.021391868591308594
+    },
+    "satcon": {
+      "sum_rate": 25766773.38919566,
+      "avg_user_rate": 402605.83420618216,
+      "runtime": 0.2612895965576172
+    },
+    "sum_rate_gain": 5797588.916170899,
+    "rate_gain_percent": 29.03267744360083,
+    "avg_rate_gain_percent": 29.03267744360083
+  },
+  "100": {
+    "baseline": {
+      "sum_rate": 20303175.558923576,
+      "avg_user_rate": 203031.75558923575,
+      "runtime": 0.024797439575195312
+    },
+    "satcon": {
+      "sum_rate": 26216325.601837162,
+      "avg_user_rate": 262163.2560183716,
+      "runtime": 1.1832797527313232
+    },
+    "sum_rate_gain": 5913150.042913586,
+    "rate_gain_percent": 29.124261994152242,
+    "avg_rate_gain_percent": 29.124261994152242
+  }
+}

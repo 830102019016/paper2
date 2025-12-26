@@ -239,8 +239,17 @@ def plot_heatmap_version_a(data_matrix, scheme_names, snr_labels, save_path):
     cbar.ax.tick_params(labelsize=10)
 
     plt.tight_layout()
+
+    # 保存PNG格式
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     print(f"[OK] 热力图已保存: {save_path}")
+
+    # 保存EPS格式（论文用）
+    eps_path = Path(str(save_path).replace('figures', 'eps').replace('.png', '.eps'))
+    eps_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(eps_path, format='eps', bbox_inches='tight')
+    print(f"[OK] EPS格式已保存: {eps_path}")
+
     plt.show()
 
     return fig
